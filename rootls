@@ -1,0 +1,164 @@
+#! /usr/bin/env python2.7
+
+from __future__ import print_function
+import os
+import sys
+import argparse
+
+try:
+    import ROOT
+except ImportError:
+    print('Error importing ROOT. Exiting...')
+    sys.exit(1)
+
+# colors
+green  = '\033[92m'
+red    = '\033[91m'
+blue   = '\033[94m'
+purple = '\033[95m'
+endc   = '\033[0m'
+
+def print_value(mean, error):
+    print('%.2f +- %.2f' % (mean, error))
+
+def get_screen_size():
+    return os.popen('stty size', 'r').read().split()
+
+
+#------------
+# Histograms
+#------------
+def draw_hist(hist):
+    pass
+
+def show_hist(hist):
+    hist.Print('all')
+
+def show_list(list_):
+
+    # create the list of names and classes
+    # colored_list = []
+
+    max_length = max([len(i) for i in list_])
+
+    # for e in list_:
+    #     colored_list.append(blue + e + endc )
+
+
+    # Configure the number of columns and rows
+    ysize, xsize = get_screen_size()
+
+    nlist = len(list_)
+
+    cols = 0
+    rows = 0
+    if nlist <= 10:
+        cols = 1
+    else:
+        cols = int(xsize)/(max_length + 12)
+
+    rows = int( round(float(nlist) / cols) )
+
+    n = nlist % cols
+    if n != 0:
+        for i in range(n):
+            list_.append(' ')
+
+    # split lists
+    split = [list_[i:i + rows] for i in xrange(0, nlist, rows)]
+
+    for row in zip(*split):
+        print( "".join(str.ljust(i, max_length) for i in row) )
+
+    return
+
+
+def show_usage():
+    print('rootls [OPTIONS] [FILEPATH:ROOTPATH]')
+
+def main():
+
+    parser = argparse.ArgumentParser(description='')
+
+    ## path
+    parser.add_argument('path')
+
+    ## general
+    parser.add_argument('--del', dest='delete', action='store_true')
+
+    ## tree
+    parser.add_argument('-ge', '--getentries', action='store_true')
+    parser.add_argument('-s', '--selection')
+
+    ## histograms
+    parser.add_argument('-gb', '--getbin', type=int)
+
+    if len(sys.argv) < 2:
+        show_usage()
+        return
+
+    args = parser.parse_args()
+
+    # split file_path:root_path
+    file_path, root_path = None, None
+    if ':' in args.path:
+        file_path, root_path = args.path.split(':')
+    else:
+        file_path = args.path
+
+    if os.path.isdir(file_path):
+        pass
+
+
+    # open file
+    fin = ROOT.TFile(file_path, 'open');
+
+    if fin.IsZombie():
+        print('Error opening rootfile')
+        fin.Close()
+        return 1
+
+    keys = fin.GetListOfKeys()
+
+    if root_path is None:
+        for key in keys:
+            print(key.GetName())
+
+    else:
+
+        if args.delete:
+            fin.ReOpen('update')
+            fin.Delete(root_path+';*')
+
+        else:
+
+            obj = fin.Get(root_path)
+
+            # histogram
+            if obj.InheritsFrom('TH1'):
+                if args.getbin is not None:
+                    bin_ = args.getbin
+
+                    if bin_ <= obj.GetNbinsX() and bin_ > 0:
+                        print(obj.GetBinContent(args.getbin))
+                    else:
+                        print_error()
+                else:
+                    show_hist(obj)
+
+            # tree
+            elif obj.InheritsFrom('TTree'):
+
+                if args.getentries:
+                    print(obj.GetEntries())
+                else:
+                    for b in obj.GetListOfLeaves():
+                        print(b.GetName())
+
+
+    fin.Close()
+    return 0
+
+
+if __name__ == '__main__':
+    main()
