@@ -81,7 +81,8 @@ def main():
     parser = argparse.ArgumentParser(description='')
 
     ## path
-    parser.add_argument('path')
+    parser.add_argument('filepath', nargs='?')
+    parser.add_argument('rootpath', nargs='?')
 
     ## general
     parser.add_argument('--del', dest='delete', action='store_true')
@@ -99,19 +100,14 @@ def main():
 
     args = parser.parse_args()
 
-    # split file_path:root_path
-    file_path, root_path = None, None
-    if ':' in args.path:
-        file_path, root_path = args.path.split(':')
-    else:
-        file_path = args.path
+    file_path, root_path = args.filepath, args.rootpath
 
     if os.path.isdir(file_path):
         pass
 
 
     # open file
-    fin = ROOT.TFile(file_path, 'open');
+    fin = ROOT.TFile.Open(file_path)
 
     if fin.IsZombie():
         print('Error opening rootfile')
@@ -134,8 +130,13 @@ def main():
 
             obj = fin.Get(root_path)
 
+            # dir
+            if obj.InheritsFrom('TDirectory'):
+                for key in obj.GetListOfKeys():
+                    print(key.GetName())
+
             # histogram
-            if obj.InheritsFrom('TH1'):
+            elif obj.InheritsFrom('TH1'):
                 if args.getbin is not None:
                     bin_ = args.getbin
 
