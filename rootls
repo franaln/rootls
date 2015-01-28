@@ -73,9 +73,6 @@ def show_list(list_):
     return
 
 
-def show_usage():
-    print('rootls [OPTIONS] [FILEPATH:ROOTPATH]')
-
 def main():
 
     parser = argparse.ArgumentParser(description='')
@@ -95,7 +92,7 @@ def main():
     parser.add_argument('-gb', '--getbin', type=int)
 
     if len(sys.argv) < 2:
-        show_usage()
+        parser.print_usage()
         return
 
     args = parser.parse_args()
@@ -103,10 +100,15 @@ def main():
     file_path, root_path = args.filepath, args.rootpath
 
     if os.path.isdir(file_path):
-        pass
+        print('this is a dir')
+        return
 
 
     # open file
+    if not os.path.isfile(file_path):
+        print('%s is not a file' % file_path)
+        return 1
+
     fin = ROOT.TFile.Open(file_path)
 
     if fin.IsZombie():
