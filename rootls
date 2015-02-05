@@ -11,6 +11,8 @@ except ImportError:
     print('Error importing ROOT. Exiting...')
     sys.exit(1)
 
+ROOT.gROOT.SetBatch()
+
 # colors
 green  = '\033[92m'
 red    = '\033[91m'
@@ -77,19 +79,19 @@ def main():
 
     parser = argparse.ArgumentParser(description='')
 
-    ## path
+    ## paths
     parser.add_argument('filepath', nargs='?')
     parser.add_argument('rootpath', nargs='?')
 
-    ## general
+    ## general options
     parser.add_argument('--del', dest='delete', action='store_true')
 
-    ## tree
+    ## tree options
     parser.add_argument('-ge', '--getentries', action='store_true')
     parser.add_argument('-s', '--selection')
 
-    ## histograms
-    parser.add_argument('-gb', '--getbin', type=int)
+    ## histogram options
+    parser.add_argument('-gb', '--getbin')
 
     if len(sys.argv) < 2:
         parser.print_usage()
@@ -139,13 +141,18 @@ def main():
 
             # histogram
             elif obj.InheritsFrom('TH1'):
+
                 if args.getbin is not None:
-                    bin_ = args.getbin
+
+                    if args.getbin == 'last':
+                        bin_ = obj.GetNbinsX()
+                    else:
+                        bin_ = int(args.getbin)
 
                     if bin_ <= obj.GetNbinsX() and bin_ > 0:
-                        print(obj.GetBinContent(args.getbin))
+                        print(obj.GetBinContent(bin_))
                     else:
-                        print_error()
+                        pass
                 else:
                     show_hist(obj)
 
