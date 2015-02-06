@@ -1,4 +1,5 @@
 #! /usr/bin/env python2.7
+# -*- python -*-
 
 from __future__ import print_function
 import os
@@ -87,8 +88,9 @@ def main():
     parser.add_argument('--del', dest='delete', action='store_true')
 
     ## tree options
+    parser.add_argument('--scan')
     parser.add_argument('-ge', '--getentries', action='store_true')
-    parser.add_argument('-s', '--selection')
+    parser.add_argument('-s', '--selection', default='')
 
     ## histogram options
     parser.add_argument('-gb', '--getbin')
@@ -161,6 +163,9 @@ def main():
 
                 if args.getentries:
                     print(obj.GetEntries())
+                elif args.scan:
+                    obj.Scan(args.scan, args.selection)
+
                 else:
                     for b in obj.GetListOfLeaves():
                         print(b.GetName())
