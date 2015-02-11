@@ -28,52 +28,99 @@ def get_screen_size():
     return os.popen('stty size', 'r').read().split()
 
 
+# ROOT file
+# class RootFile(ROOT.TFile):
+
+#     def __init__(self, path, mode='read'):
+#         ROOT.TFile.__init__(self, path, mode)
+#         ROOT.SetOwnership(self, False)
+#         self.path = path
+#         self.name = self.path.split('/')[-1].replace('.root','')
+#         self.mode = mode
+
+#     # get objects methods
+#     def get(self, objname):
+#         obj = self.Get(objname)
+#         obj.SetDirectory(0)
+#         return obj
+
+#     # write objects methods
+#     def write(self, obj, name=None):
+#         if name is None:
+#             name = obj.GetName()
+
+#         if self.mode == 'update':
+#             self.Delete(name+';*')
+
+#         try:
+#             obj.SetDirectory(self)
+#         except:
+#             self.cd()
+#             obj.Write(name)
+
+#         try:
+#             obj.SetDirectory(0)
+#         except:
+#             pass
+
+#     # loop over objects
+#     def loop(self):
+#         for key in self.GetListOfKeys():
+#             obj = key.ReadObj()
+#             yield obj
+
+#     #
+#     def __del__(self):
+#         self.Close()
+
+#     def __enter__(self):
+#         return self
+
+#     def __exit__(self, type, value, traceback):
+#         self.Close()
+
+
 #------------
 # Histograms
 #------------
+def print_hist(hist, args):
+
+    if args.getbin is not None:
+
+        if args.getbin == 'last':
+            bin_ = hist.GetNbinsX()
+        else:
+            bin_ = int(args.getbin)
+
+        if bin_ <= hist.GetNbinsX() and bin_ > 0:
+            print(hist.GetBinContent(bin_))
+        else:
+            print('bin %i does not exist.' % bin_)
+
+    else:
+        hist.Print('all')
+
 def draw_hist(hist):
     pass
 
-def show_hist(hist):
-    hist.Print('all')
+#-------
+# Trees
+#-------
+def print_tree(tree, args):
 
-def show_list(list_):
+    if args.getentries:
+        print(tree.GetEntries())
+    elif args.scan:
+        tree.Scan(args.scan, args.selection)
+    elif args.search:
+        pass
 
-    # create the list of names and classes
-    # colored_list = []
-
-    max_length = max([len(i) for i in list_])
-
-    # for e in list_:
-    #     colored_list.append(blue + e + endc )
-
-
-    # Configure the number of columns and rows
-    ysize, xsize = get_screen_size()
-
-    nlist = len(list_)
-
-    cols = 0
-    rows = 0
-    if nlist <= 10:
-        cols = 1
     else:
-        cols = int(xsize)/(max_length + 12)
+        for b in tree.GetListOfLeaves():
+            print(b.GetName())
 
-    rows = int( round(float(nlist) / cols) )
 
-    n = nlist % cols
-    if n != 0:
-        for i in range(n):
-            list_.append(' ')
 
-    # split lists
-    split = [list_[i:i + rows] for i in xrange(0, nlist, rows)]
-
-    for row in zip(*split):
-        print( "".join(str.ljust(i, max_length) for i in row) )
-
-    return
 
 
 def main():
@@ -89,6 +136,7 @@ def main():
 
     ## tree options
     parser.add_argument('--scan')
+    parser.add_argument('--search')
     parser.add_argument('-ge', '--getentries', action='store_true')
     parser.add_argument('-s', '--selection', default='')
 
@@ -103,12 +151,44 @@ def main():
 
     file_path, root_path = args.filepath, args.rootpath
 
+    # dir with root files
     if os.path.isdir(file_path):
-        print('this is a dir')
+
+        dir_content = [ os.path.join(file_path, fn) for fn in os.listdir(file_path) if '.root' in fn ]
+
+        # assume all files in dir have the same tree with this name
+        if root_path is not None:
+
+            obj = ROOT.TFile.Open(dir_content[0]).Get(root_path)
+
+            # tree
+            if obj.InheritsFrom('TTree'):
+
+                chain = ROOT.TChain(root_path)
+
+                for fn in dir_content:
+                    chain.Add(fn)
+
+                print_tree(chain, args)
+
+            # histogram
+            elif obj.InheritsFrom('TH1'):
+
+                hist = obj.Clone()
+
+                for fn in dir_content[1:]:
+
+                    f = ROOT.TFile.Open(fn)
+
+                    h = f.Get(root_path)
+
+                    hist.Add(h, 1.0)
+
+                print_hist(hist, args)
+
         return
 
-
-    # open file
+    # root file
     if not os.path.isfile(file_path):
         print('%s is not a file' % file_path)
         return 1
@@ -143,32 +223,11 @@ def main():
 
             # histogram
             elif obj.InheritsFrom('TH1'):
-
-                if args.getbin is not None:
-
-                    if args.getbin == 'last':
-                        bin_ = obj.GetNbinsX()
-                    else:
-                        bin_ = int(args.getbin)
-
-                    if bin_ <= obj.GetNbinsX() and bin_ > 0:
-                        print(obj.GetBinContent(bin_))
-                    else:
-                        pass
-                else:
-                    show_hist(obj)
+                print_hist(obj, args)
 
             # tree
             elif obj.InheritsFrom('TTree'):
-
-                if args.getentries:
-                    print(obj.GetEntries())
-                elif args.scan:
-                    obj.Scan(args.scan, args.selection)
-
-                else:
-                    for b in obj.GetListOfLeaves():
-                        print(b.GetName())
+                print_tree(obj, args)
 
 
     fin.Close()
