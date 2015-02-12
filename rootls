@@ -212,7 +212,7 @@ def main():
             fin.ReOpen('update')
             fin.Delete(root_path+';*')
 
-        else:
+        elif root_path in [ key.GetName() for key in keys ]:
 
             obj = fin.Get(root_path)
 
@@ -228,6 +228,9 @@ def main():
             # tree
             elif obj.InheritsFrom('TTree'):
                 print_tree(obj, args)
+
+        else:
+            print('object %s does not exist' % root_path)
 
 
     fin.Close()
