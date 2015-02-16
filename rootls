@@ -156,6 +156,10 @@ def main():
 
         dir_content = [ os.path.join(file_path, fn) for fn in os.listdir(file_path) if '.root' in fn ]
 
+        if len(dir_content) == 0:
+            print('directory is empty')
+            return 1
+
         # assume all files in dir have the same tree with this name
         if root_path is not None:
 
