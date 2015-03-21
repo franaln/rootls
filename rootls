@@ -133,6 +133,7 @@ def main():
 
     ## general options
     parser.add_argument('--del', dest='delete', action='store_true')
+    parser.add_argument('-t', '--type', action='store_true', help='')
 
     ## tree options
     parser.add_argument('--scan')
@@ -204,7 +205,10 @@ def main():
 
     if root_path is None:
         for key in keys:
-            print(key.GetName())
+            if args.type:
+                print('%s [%s]' % (key.GetName(), key.GetClassName()))
+            else:
+                print(key.GetName())
 
     else:
 
