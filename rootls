@@ -83,6 +83,15 @@ def get_screen_size():
 #------------
 # Histograms
 #------------
+def print_hist_all(hist):
+    for b in xrange(hist.GetNbinsX()):
+        label = hist.GetXaxis().GetBinLabel(b+1)
+        if not label:
+            label = 'bin %.2i' % (b+1)
+
+        print('%s: %.2f +- %.2f' % (label, hist.GetBinContent(b+1), hist.GetBinError(b+1)))
+
+
 def print_hist(hist, args):
 
     if args.getbin is not None:
@@ -98,7 +107,7 @@ def print_hist(hist, args):
             print('bin %i does not exist.' % bin_)
 
     else:
-        hist.Print('all')
+        print_hist_all(hist)
 
 def draw_hist(hist):
     pass
@@ -133,6 +142,7 @@ def main():
 
     ## general options
     parser.add_argument('--del', dest='delete', action='store_true')
+    parser.add_argument('-t', '--type', action='store_true', help='')
 
     ## tree options
     parser.add_argument('--scan')
@@ -208,7 +218,10 @@ def main():
 
     if root_path is None:
         for key in keys:
-            print(key.GetName())
+            if args.type:
+                print('%s [%s]' % (key.GetName(), key.GetClassName()))
+            else:
+                print(key.GetName())
 
     else:
 
