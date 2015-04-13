@@ -27,59 +27,6 @@ def print_value(mean, error):
 def get_screen_size():
     return os.popen('stty size', 'r').read().split()
 
-
-# ROOT file
-# class RootFile(ROOT.TFile):
-
-#     def __init__(self, path, mode='read'):
-#         ROOT.TFile.__init__(self, path, mode)
-#         ROOT.SetOwnership(self, False)
-#         self.path = path
-#         self.name = self.path.split('/')[-1].replace('.root','')
-#         self.mode = mode
-
-#     # get objects methods
-#     def get(self, objname):
-#         obj = self.Get(objname)
-#         obj.SetDirectory(0)
-#         return obj
-
-#     # write objects methods
-#     def write(self, obj, name=None):
-#         if name is None:
-#             name = obj.GetName()
-
-#         if self.mode == 'update':
-#             self.Delete(name+';*')
-
-#         try:
-#             obj.SetDirectory(self)
-#         except:
-#             self.cd()
-#             obj.Write(name)
-
-#         try:
-#             obj.SetDirectory(0)
-#         except:
-#             pass
-
-#     # loop over objects
-#     def loop(self):
-#         for key in self.GetListOfKeys():
-#             obj = key.ReadObj()
-#             yield obj
-
-#     #
-#     def __del__(self):
-#         self.Close()
-
-#     def __enter__(self):
-#         return self
-
-#     def __exit__(self, type, value, traceback):
-#         self.Close()
-
-
 #------------
 # Histograms
 #------------

@@ -418,7 +418,7 @@ colourdict = {
     'pink':        '#CF4457',
     'green':       '#467821',
     'yellow':      '#e2a233',
-    'lightyellow': '#f7fab3',
+    'lyellow': '#f7fab3',
     'grey':        '#838283',
     'gray':        '#838283',
 }
@@ -445,12 +445,15 @@ def get_color(c):
 
     return colour
 
-def set_color(obj, color, fill=False):
+def set_color(obj, color, fill=False, alpha=None):
     color = get_color(color)
     obj.SetLineColor(color)
     obj.SetMarkerColor(color)
     if fill:
-        obj.SetFillColor(color)
+        if alpha is not None:
+            obj.SetFillColorAlpha(color, alpha)
+        else:
+            obj.SetFillColor(color)
 
 def set_hist_style(hist, **kwargs):
 
@@ -496,11 +499,13 @@ def set_graph_style(graph, **kwargs):
     marker_size = kwargs.get('msize', 0.8)
     line_width = kwargs.get('lwidth', 2)
 
+    alpha = kwargs.get('alpha', None)
+
     # default
     graph.SetTitle('')
 
     # color
-    set_color(graph, color, fill)
+    set_color(graph, color, fill, alpha)
 
     # marker
     graph.SetMarkerStyle(marker_style)
@@ -535,8 +540,9 @@ def set_default_style():
     ROOT.gStyle.SetTitleBorderSize(0)
     ROOT.gStyle.SetTitleFillColor(0)
     ROOT.gStyle.SetTextFont(132)
-    ROOT.gStyle.SetLabelFont(132,"XY")
-    ROOT.gStyle.SetTitleFont(132,"XY")
+    ROOT.gStyle.SetLegendFont(132)
+    ROOT.gStyle.SetLabelFont(132, "XYZ")
+    ROOT.gStyle.SetTitleFont(132, "XYZ")
     ROOT.gStyle.SetEndErrorSize(0)
 
 
