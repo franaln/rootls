@@ -1,0 +1,140 @@
+#! /usr/bin/env python2.7
+# -*- python -*-
+
+from __future__ import print_function
+import os
+import sys
+import argparse
+
+try:
+    import ROOT
+except ImportError:
+    print('Error importing ROOT. Exiting...')
+    sys.exit(1)
+
+ROOT.gROOT.SetBatch()
+
+from rootutils import *
+
+# colors
+green  = '\033[92m'
+red    = '\033[91m'
+blue   = '\033[94m'
+purple = '\033[95m'
+endc   = '\033[0m'
+
+def print_value(mean, error):
+    print('%.2f +- %.2f' % (mean, error))
+
+def get_screen_size():
+    return os.popen('stty size', 'r').read().split()
+
+
+
+def main():
+
+    parser = argparse.ArgumentParser(description='')
+
+    ## paths
+    parser.add_argument('filepath', nargs='?')
+    parser.add_argument('rootpath', nargs='?')
+
+    ## options
+    parser.add_argument('-o', '--output', help='Output name')
+
+    parser.add_argument('--logx', action='store_true', help='Set log scale in x axis')
+    parser.add_argument('--logy', action='store_true', help='Set log scale in y axis')
+    parser.add_argument('--logz', action='store_true', help='Set log scale in z axis')
+
+    parser.add_argument('-s', '--selection', help='Selection')
+
+    args = parser.parse_args()
+
+    file_path, root_path = args.filepath, args.rootpath
+
+    if file_path is None or root_path is None:
+        parser.print_usage()
+        return 1
+
+    # root file
+    if not os.path.isfile(file_path):
+        print('%s is not a file' % file_path)
+        return 1
+
+    fin = ROOT.TFile.Open(file_path)
+
+    if fin.IsZombie():
+        print('error opening rootfile')
+        fin.Close()
+        return 1
+
+    keys = fin.GetListOfKeys()
+
+    if root_path not in [ key.GetName() for key in keys ] and '/' not in root_path:
+        print('object %s does not exist' % root_path)
+        fin.Close()
+        return 1
+
+
+    s_root_path = root_path.split('/')
+
+    obj = fin.Get(s_root_path[0])
+
+    # dir
+    if obj.InheritsFrom('TDirectory'):
+        pass
+
+    # histogram
+    elif obj.InheritsFrom('TH1'):
+        hist = obj
+
+    # tree
+    elif obj.InheritsFrom('TTree'):
+
+        if len(s_root_path) < 2:
+            print('')
+            hist = None
+        else:
+
+            obj.Draw(s_root_path[1]+'>>htmp', '', 'goff')
+
+            hist = ROOT.gDirectory.Get('htmp')
+
+
+    if hist is None:
+        fin.Close()
+        return 1
+
+    # plot
+
+    set_default_style()
+
+    set_hist_style(hist, color='blue')
+
+
+    canvas = ROOT.TCanvas()
+
+    if args.logx:
+        canvas.SetLogy()
+    if args.logy:
+        canvas.SetLogy()
+    if args.logz:
+        canvas.SetLogz()
+
+
+    hist.Draw()
+
+
+    outname = args.output if args.output is not None else hist.GetName() + '.pdf'
+    canvas.SaveAs(outname)
+
+
+
+
+
+    fin.Close()
+    return 0
+
+
+if __name__ == '__main__':
+    main()
