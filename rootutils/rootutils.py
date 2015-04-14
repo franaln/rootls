@@ -124,7 +124,6 @@ class RootFile(ROOT.TFile):
 #-----------
 # Histograms
 #-----------
-
 def histogram(name, nx=None, xmin=None, xmax=None, xbins=None):
 
     if xbins:
@@ -137,12 +136,26 @@ def histogram(name, nx=None, xmin=None, xmax=None, xbins=None):
 
     return hist
 
+def histogram2d(name, nx=None, xmin=None, xmax=None, ny=None, ymin=None, ymax=None, xbins=None, ybins=None):
+
+    if xbins is not None and ybins is not None:
+        hist = ROOT.TH2F(name, name, len(xbins)-1, array('d', xbins), len(ybins)-1, array('d', ybins))
+    elif nx is not None and ny is not None:
+        hist = ROOT.TH2F(name, name, nx, xmin, xmax, ny, ymin, ymax)
+
+    hist.SetDirectory(0)
+
+    return hist
 
 def histogram_equal_to(hist):
     newhist = hist.Clone(name)
     newhist.Reset()
     return newhist
 
+def normalize_hist(hist):
+    area = hist.Integral()
+    if area > 0:
+        hist.Scale(1/area)
 
 def normalize_to(hist, other, xmin=None, xmax=None):
     if xmin and xmax:
@@ -154,20 +167,6 @@ def normalize_to(hist, other, xmin=None, xmax=None):
     s = n2/n1 if n1 > 0.0 else 1.0
     hist.Scale(s)
     return s
-
-# def get_cumulative(self, inverse=False):
-#         """ get cumulative histogram """
-
-#         hist = Hist.equal_to(self)
-#         nx = hist.GetNbinsX()
-#         for bx in range(nx):
-#             if inverse_x:
-#                 cum = self.Integral(1, bx+1)
-#             else:
-#                 cum = self.Integral(bx+1, nx)
-
-#             hist.SetBinContent(bx+1, cum)
-#         return hist
 
 def add_overflow_bin(hist):
     """ add the overflow bin  content to
@@ -188,7 +187,7 @@ def add_overflow_bin(hist):
     hist.SetBinError(last_bin, new_err)
     hist.SetBinError(over_bin, 0.0)
 
-def scale(hist, c, err_c=None):
+def scale_hist(hist, c, err_c=None):
     """ Scale histogram by a factor with error (c +- err_c)
 
     * c could be a Value(), or a number
@@ -209,24 +208,7 @@ def scale(hist, c, err_c=None):
         err2 = (hist.GetBinContent(b+1) * err_c)**2 + (c * hist.GetBinError(b+1))**2
         hist.SetBinError(b+1, math.sqrt(err2))
 
-
-
-
-def histogram2d(name, nx=None, xmin=None, xmax=None, ny=None, ymin=None, ymax=None, xbins=None, ybins=None):
-
-    if xbins is not None and ybins is not None:
-        hist = ROOT.TH2F(name, name, len(xbins)-1, array('d', xbins), len(ybins)-1, array('d', ybins))
-    elif nx is not None and ny is not None:
-        hist = ROOT.TH2F(name, name, nx, xmin, xmax, ny, ymin, ymax)
-    self.SetDirectory(0)
-
-
-def normalize_hist(hist):
-    area = hist.Integral()
-    if area > 0:
-        hist.Scale(1/area)
-
-def get_cumulative(hist, inverse_x=False, inverse_y=False):
+def get_cumulative_hist(hist, inverse_x=False, inverse_y=False):
 
     newhist = hist.Clone(hist.GetName())
     nx = hist.GetNbinsX()
@@ -247,6 +229,7 @@ def get_cumulative(hist, inverse_x=False, inverse_y=False):
     return newhist
 
 
+# Histogram Manager
 class HistManager:
 
     def __init__(self, path=None):
@@ -305,9 +288,32 @@ class HistManager:
         return self.data.iteritems()
 
 
-#-----------
+#--------
+# Graphs
+#--------
+def sort_graph(g):
+
+    ax = array('f', [])
+    ay = array('f', [])
+
+    d = dict()
+    for i in xrange(g.GetN()):
+
+        xtmp = ROOT.Double(0)
+        ytmp = ROOT.Double(0)
+
+        g.GetPoint(i, xtmp, ytmp)
+        d[xtmp] = ytmp
+
+    for x, y in sorted(d.iteritems()):
+        ax.append(x)
+        ay.append(y)
+
+    return ROOT.TGraph(g.GetN(), ax, ay)
+
+#-------
 # Style
-#-----------
+#-------
 colourdict = {
     'orange':      '#E24A33',
     'purple':      '#7A68A6',
@@ -328,7 +334,6 @@ def get_color(c):
         if c.startswith('#'):
             colour = ROOT.TColor.GetColor(c)
         else:
-
             try:
                 colour = ROOT.TColor.GetColor(colourdict[c])
             except KeyError:
@@ -445,22 +450,30 @@ def set_default_style():
     ROOT.gStyle.SetTitleFont(132, "XYZ")
     ROOT.gStyle.SetEndErrorSize(0)
 
-
-#-- Plots --
-def  create_canvas(name='', title=None, xsize=None, ysize=None, logy=False):
+def canvas(name='', title=None, xsize=None, ysize=None):
     if title is None:
         title = name
     c = ROOT.TCanvas(name, title, xsize, ysize)
     ROOT.SetOwnership(c, False)
     c.SetTopMargin(0.04)
-    if logy:
-        c.SetLogy()
     return c
 
-def create_legend(xmin, xmax, ymin, ymax, columns=1):
+def legend(xmin, ymin, xmax, ymax, columns=1):
     leg = ROOT.TLegend(xmin, ymin, xmax, ymax)
     leg.SetFillColor(0)
     leg.SetBorderSize(0)
     if columns > 1:
         leg.SetNColumns(columns)
     return leg
+
+def draw_latex(x, y, text, size=None, ndc=False):
+    l = ROOT.TLatex(x, y, text)
+    ROOT.SetOwnership(l, False)
+
+    if ndc:
+        l.SetNDC()
+
+    if size is not None:
+        l.SetTextSize(size)
+
+    l.Draw()
