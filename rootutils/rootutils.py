@@ -124,222 +124,127 @@ class RootFile(ROOT.TFile):
 #-----------
 # Histograms
 #-----------
-class Hist(ROOT.TH1F):
-    def __init__(self, name, nx=None, xmin=None, xmax=None, xbins=None, obj=None, title=None, owned=False):
-        self.name = name
-        if title is None:
-            title = name
 
-        # init TH1
-        if obj:
-            ROOT.TH1F.__init__(self, obj)
-            self.SetTitle(title)
-        elif xbins:
-            ROOT.TH1F.__init__(self, name, title, len(xbins)-1, array('d', xbins))
-        elif nx is not None and xmin is not None and xmax is not None:
-            ROOT.TH1F.__init__(self, name, title, nx, xmin, xmax)
+def histogram(name, nx=None, xmin=None, xmax=None, xbins=None):
 
-        # To not be owned by the current directory
-        if not owned:
-            self.SetDirectory(0)
+    if xbins:
+        hist = ROOT.TH1F(name, name, len(xbins)-1, array('d', xbins))
+    elif nx is not None and xmin is not None and xmax is not None:
+        hist = ROOT.TH1F(name, name, nx, xmin, xmax)
 
-    @classmethod
-    def from_file(cls, filename,  histname):
-        with RootFile(filename) as f:
-            hist = f.get(histname)
-            return cls(hist.GetName(), obj=hist)
+    # To not be owned by the current directory
+    hist.SetDirectory(0)
 
-    @classmethod
-    def equal_to(cls, other, name=''):
-        hist = other.Clone(name)
-        hist.Reset()
-        return cls(name, obj=hist)
+    return hist
 
-    @classmethod
-    def from_other(cls, other, name=None):
-        if name is None:
-            name = other.GetName()
 
-        return cls(name, obj=other.Clone(name))
+def histogram_equal_to(hist):
+    newhist = hist.Clone(name)
+    newhist.Reset()
+    return newhist
 
-    def copy(self):
-        return Hist(self.name, obj=self.Clone(self.name))
 
-    def __add__(self, other):
-        hist = self.copy()
-        hist.Add(other, 1.0)
-        return hist
+def normalize_to(hist, other, xmin=None, xmax=None):
+    if xmin and xmax:
+        n1 = hist.Integral(hist.FindBin(xmin), hist.FindBin(xmax))
+        n2 = other.Integral(other.FindBin(xmin), other.FindBin(xmax))
+    else:
+        n1 = hist.Integral()
+        n2 = other.Integral()
+    s = n2/n1 if n1 > 0.0 else 1.0
+    hist.Scale(s)
+    return s
 
-    def __sub__(self, other):
-        hist = self.copy()
-        hist.Add(other, -1.0)
-        return hist
+# def get_cumulative(self, inverse=False):
+#         """ get cumulative histogram """
 
-    def __div__(self, other):
-        hist = self.copy()
-        hist.Divide(other)
-        return hist
+#         hist = Hist.equal_to(self)
+#         nx = hist.GetNbinsX()
+#         for bx in range(nx):
+#             if inverse_x:
+#                 cum = self.Integral(1, bx+1)
+#             else:
+#                 cum = self.Integral(bx+1, nx)
 
-    def __cmp__(self, other):
-        amax = self.GetMaximum()
-        bmax = other.GetMaximum()
-        return cmp(int(amax), int(bmax))
+#             hist.SetBinContent(bx+1, cum)
+#         return hist
 
-    def rebin(self, n):
-        self.Rebin(n)
+def add_overflow_bin(hist):
+    """ add the overflow bin  content to
+    the last bin """
 
-    def normalize(self):
-        area = self.Integral()
-        if area > 0:
-            self.Scale(1/area)
+    last_bin = hist.GetNbinsX()
+    over_bin = last_bin + 1
 
-    def normalize_to(self, other, xmin=None, xmax=None):
-        if xmin and xmax:
-            n1 = self.Integral(self.FindBin(xmin), self.FindBin(xmax))
-            n2 = other.Integral(other.FindBin(xmin), other.FindBin(xmax))
-        else:
-            n1 = self.Integral()
-            n2 = other.Integral()
-        s = n2/n1 if n1 > 0.0 else 1.0
-        self.Scale(s)
-        return s
+    # value
+    new_val = hist.GetBinContent(last_bin) + hist.GetBinContent(over_bin)
+    hist.SetBinContent(last_bin, new_val)
+    hist.SetBinContent(over_bin, 0.0)
 
-    def get_cumulative(self, inverse=False):
-        """ get cumulative histogram """
+    # error
+    e1 = hist.GetBinError(last_bin)
+    e2 = hist.GetBinError(over_bin)
+    new_err = math.sqrt(e1*e1 + e2*e2)
+    hist.SetBinError(last_bin, new_err)
+    hist.SetBinError(over_bin, 0.0)
 
-        hist = Hist.equal_to(self)
-        nx = hist.GetNbinsX()
-        for bx in range(nx):
-            if inverse_x:
-                cum = self.Integral(1, bx+1)
+def scale(hist, c, err_c=None):
+    """ Scale histogram by a factor with error (c +- err_c)
+
+    * c could be a Value(), or a number
+    * err_c could be a number or None.
+    * If error is None and c is not a Value(), it does the same as TH1.Scale()
+    """
+    try:
+        c, err_c = c.mean, c.error
+    except AttributeError:
+        pass
+
+    if err_c is None:
+        hist.Scale(c)
+        return
+
+    for b in xrange(self.GetNbinsX()):
+        hist.SetBinContent(b+1, hist.GetBinContent(b+1) * c)
+        err2 = (hist.GetBinContent(b+1) * err_c)**2 + (c * hist.GetBinError(b+1))**2
+        hist.SetBinError(b+1, math.sqrt(err2))
+
+
+
+
+def histogram2d(name, nx=None, xmin=None, xmax=None, ny=None, ymin=None, ymax=None, xbins=None, ybins=None):
+
+    if xbins is not None and ybins is not None:
+        hist = ROOT.TH2F(name, name, len(xbins)-1, array('d', xbins), len(ybins)-1, array('d', ybins))
+    elif nx is not None and ny is not None:
+        hist = ROOT.TH2F(name, name, nx, xmin, xmax, ny, ymin, ymax)
+    self.SetDirectory(0)
+
+
+def normalize_hist(hist):
+    area = hist.Integral()
+    if area > 0:
+        hist.Scale(1/area)
+
+def get_cumulative(hist, inverse_x=False, inverse_y=False):
+
+    newhist = hist.Clone(hist.GetName())
+    nx = hist.GetNbinsX()
+    ny = hist.GetNbinsY()
+    for bx in range(nx):
+        for by in range(ny):
+            if inverse_x and inverse_y:
+                cum = hist.Integral(1, bx+1, 1, by+1)
+            elif inverse_x:
+                cum = hist.Integral(1, bx+1, by+1, ny)
+            elif inverse_y:
+                cum = hist.Integral(bx+1, nx, 1, by+1)
             else:
-                cum = self.Integral(bx+1, nx)
+                cum = hist.Integral(bx+1, nx, by+1, ny)
 
-            hist.SetBinContent(bx+1, cum)
-        return hist
+            newhist.SetBinContent(bx+1, by+1, cum)
 
-    def add_overflow_bin(self):
-        """ add the overflow bin  content to
-        the last bin """
-
-        last_bin = self.GetNbinsX()
-        over_bin = last_bin + 1
-
-        # value
-        new_val = self.GetBinContent(last_bin) + self.GetBinContent(over_bin)
-        self.SetBinContent(last_bin, new_val)
-        self.SetBinContent(over_bin, 0.0)
-
-        # error
-        e1 = self.GetBinError(last_bin)
-        e2 = self.GetBinError(over_bin)
-        new_err = math.sqrt(e1*e1 + e2*e2)
-        self.SetBinError(last_bin, new_err)
-        self.SetBinError(over_bin, 0.0)
-
-    def scale(self, c, err_c=None):
-        """ Scale histogram by a factor with error (c +- err_c)
-
-        * c could be a Value(), or a number
-        * err_c could be a number or None.
-        * If erroe is None and c is not a Value(), it does the same as TH1.Scale()
-        """
-        try:
-            c, err_c = c.mean, c.error
-        except AttributeError:
-            pass
-
-        if err_c is None:
-            self.Scale(c)
-            return
-
-        for b in xrange(self.GetNbinsX()):
-            self.SetBinContent(b+1, self.GetBinContent(b+1) * c)
-            err2 = (self.GetBinContent(b+1) * err_c)**2 + (c * self.GetBinError(b+1))**2
-            self.SetBinError(b+1, math.sqrt(err2))
-
-
-class Hist2D(ROOT.TH2F):
-    def __init__(self, name, nx=None, xmin=None, xmax=None, ny=None, ymin=None, ymax=None, xbins=None, ybins=None, title=None, obj=None):
-        self.name = name
-        if title is None:
-            title = name
-
-        if obj:
-            ROOT.TH2F.__init__(self, obj)
-            self.SetTitle(title)
-        elif xbins is not None and ybins is not None:
-            ROOT.TH2F.__init__(self, name, name, len(xbins)-1, array('d', xbins), len(ybins)-1, array('d', ybins))
-        elif nx is not None and ny is not None:
-            ROOT.TH2F.__init__(self, name, name, nx, xmin, xmax, ny, ymin, ymax)
-        self.SetDirectory(0)
-
-    @classmethod
-    def from_file(cls, filename,  histname):
-        with RootFile(filename) as f:
-            hist = f.get(histname)
-            return cls(hist.GetName(), obj=hist)
-
-    @classmethod
-    def equal_to(cls, other, name=''):
-        hist = other.Clone(name)
-        hist.Reset()
-        return cls(name, obj=hist)
-
-    @classmethod
-    def from_other(cls, other, name=None):
-        if name is None:
-            name = other.GetName()
-        return cls(name, obj=other.Clone(name))
-
-    def copy(self):
-        return Hist2D(self.name, obj=self.Clone(self.name))
-
-    def __add__(self, other):
-        hist = self.copy()
-        hist.Add(other, 1.0)
-        return hist
-
-    def __sub__(self, other):
-        hist = self.copy()
-        hist.Add(other, -1.0)
-        return hist
-
-    def __div__(self, other):
-        hist = self.copy()
-        hist.Divide(other)
-        return hist
-
-    def rebin(self, nx, ny=None):
-        if ny is None:
-            self.RebinX(nx)
-            self.RebinY(nx)
-        else:
-            self.RebinX(nx)
-            self.RebinY(ny)
-
-    def normalize(self):
-        area = self.Integral()
-        if area > 0:
-            self.Scale(1/area)
-
-    def get_cumulative(self, inverse_x=False, inverse_y=False):
-        hist = self.equal_to(self)
-        nx = hist.GetNbinsX()
-        ny = hist.GetNbinsY()
-        for bx in range(nx):
-            for by in range(ny):
-                if inverse_x and inverse_y:
-                    cum = self.Integral(1, bx+1, 1, by+1)
-                elif inverse_x:
-                    cum = self.Integral(1, bx+1, by+1, ny)
-                elif inverse_y:
-                    cum = self.Integral(bx+1, nx, 1, by+1)
-                else:
-                    cum = self.Integral(bx+1, nx, by+1, ny)
-
-                hist.SetBinContent(bx+1, by+1, cum)
-        return hist
+    return newhist
 
 
 class HistManager:
@@ -400,12 +305,6 @@ class HistManager:
         return self.data.iteritems()
 
 
-# Histogram functions
-def normalize_hist(h):
-    area = self.Integral()
-    if area > 0:
-        h.Scale(1/area)
-
 #-----------
 # Style
 #-----------
@@ -419,11 +318,7 @@ colourdict = {
     'pink':        '#CF4457',
     'green':       '#467821',
     'yellow':      '#e2a233',
-<<<<<<< HEAD
-    'lyellow': '#f7fab3',
-=======
     'lyellow':     '#f7fab3',
->>>>>>> 85aa5d633c4e4a245c3ee2daac5e5bd1f355f78d
     'grey':        '#838283',
     'gray':        '#838283',
 }

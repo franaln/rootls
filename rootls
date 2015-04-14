@@ -12,7 +12,8 @@ except ImportError:
     print('Error importing ROOT. Exiting...')
     sys.exit(1)
 
-ROOT.gROOT.SetBatch()
+ROOT.PyConfig.IgnoreCommandLineOptions = True
+ROOT.gROOT.SetBatch(True)
 
 # colors
 green  = '\033[92m'
