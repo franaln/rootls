@@ -155,12 +155,16 @@ def main():
         print('%s is not a file' % file_path)
         return 1
 
-    fin = ROOT.TFile.Open(file_path)
+    try:
+        fin = ROOT.TFile.Open(file_path)
 
-    if fin.IsZombie():
-        print('Error opening rootfile')
-        fin.Close()
+        if fin.IsZombie():
+            print('Error opening rootfile')
+            fin.Close()
+            return 1
+    except ReferenceError:
         return 1
+
 
     keys = fin.GetListOfKeys()
 
