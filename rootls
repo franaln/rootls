@@ -5,6 +5,7 @@ from __future__ import print_function
 import os
 import sys
 import argparse
+from prettytable import PrettyTable
 
 try:
     import ROOT
@@ -21,6 +22,15 @@ red    = '\033[91m'
 blue   = '\033[94m'
 purple = '\033[95m'
 endc   = '\033[0m'
+
+
+def str_to_num(s):
+    try:
+        return int(s)
+    except ValueError:
+        return float(s)
+
+
 
 #------------
 # Histograms
@@ -53,20 +63,43 @@ def print_hist(hist, args):
 #-------
 # Trees
 #-------
+def scan_tree(tree, fields, selection, sort=None):
+
+    # get query
+    res = tree.Query(fields, selection)
+
+    nrows = res.GetRowCount()
+    nfields = res.GetFieldCount()
+
+    fields = [res.GetFieldName(j) for j in xrange(nfields)]
+    rows = []
+    for i in xrange(nrows):
+        row = res.Next()
+        rows.append([str_to_num(row.GetField(j)) for j in xrange(nfields)])
+
+
+    # build table
+    table = PrettyTable(fields)
+    for row in rows:
+        table.add_row(row)
+
+    table.sortby = sort
+    table.align = 'r'
+
+    print(table)
+
+
 def print_tree(tree, args):
 
     if args.getentries:
         print(tree.GetEntries())
+
     elif args.scan:
-        tree.Scan(args.scan, args.selection)
-    elif args.search:
-        pass
+        scan_tree(tree, args.scan, args.selection, args.sort)
 
     else:
         for b in tree.GetListOfLeaves():
             print(b.GetName())
-
-
 
 
 
@@ -84,7 +117,9 @@ def main():
 
     ## tree options
     parser.add_argument('--scan')
-    parser.add_argument('--search')
+    parser.add_argument('--sort')
+
+
     parser.add_argument('-ge', '--getentries', action='store_true')
     parser.add_argument('-s', '--selection', default='')
 
