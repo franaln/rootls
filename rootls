@@ -22,12 +22,6 @@ blue   = '\033[94m'
 purple = '\033[95m'
 endc   = '\033[0m'
 
-def print_value(mean, error):
-    print('%.2f +- %.2f' % (mean, error))
-
-def get_screen_size():
-    return os.popen('stty size', 'r').read().split()
-
 #------------
 # Histograms
 #------------
@@ -36,7 +30,6 @@ def print_hist_all(hist):
         label = hist.GetXaxis().GetBinLabel(b+1)
         if not label:
             label = 'bin %.2i' % (b+1)
-
         print('%s: %.2f +- %.2f' % (label, hist.GetBinContent(b+1), hist.GetBinError(b+1)))
 
 
@@ -56,9 +49,6 @@ def print_hist(hist, args):
 
     else:
         print_hist_all(hist)
-
-def draw_hist(hist):
-    pass
 
 #-------
 # Trees
