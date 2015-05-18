@@ -134,6 +134,10 @@ def histogram(name, nx=None, xmin=None, xmax=None, xbins=None):
     # To not be owned by the current directory
     hist.SetDirectory(0)
 
+    # Default configuration
+    hist.SetStats(0)
+    hist.SetTitle('')
+
     return hist
 
 def histogram2d(name, nx=None, xmin=None, xmax=None, ny=None, ymin=None, ymax=None, xbins=None, ybins=None):
@@ -453,9 +457,11 @@ def set_default_style():
 def canvas(name='', title=None, xsize=None, ysize=None):
     if title is None:
         title = name
+    if xsize is None or ysize is None:
+        xsize, ysize = 800, 800
     c = ROOT.TCanvas(name, title, xsize, ysize)
     ROOT.SetOwnership(c, False)
-    c.SetTopMargin(0.04)
+    #c.SetTopMargin(0.04)
     return c
 
 def legend(xmin, ymin, xmax, ymax, columns=1):
