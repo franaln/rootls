@@ -411,7 +411,7 @@ def set_style(obj, **kwargs):
 
     # default
     obj.SetTitle('')
-    if ishist:
+    if is_hist:
         obj.SetStats(0)
 
     # color
