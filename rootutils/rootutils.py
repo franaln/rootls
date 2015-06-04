@@ -133,8 +133,10 @@ def histogram(name, nx=None, xmin=None, xmax=None, xbins=None):
 
     # To not be owned by the current directory
     hist.SetDirectory(0)
+    ROOT.SetOwnership(hist, False)
 
     # Default configuration
+    hist.Sumw2()
     hist.SetStats(0)
     hist.SetTitle('')
 
@@ -156,12 +158,12 @@ def histogram_equal_to(hist):
     newhist.Reset()
     return newhist
 
-def normalize_hist(hist):
+def histogram_normalize(hist):
     area = hist.Integral()
     if area > 0:
         hist.Scale(1/area)
 
-def normalize_to(hist, other, xmin=None, xmax=None):
+def histogram_normalize_to(hist, other, xmin=None, xmax=None):
     if xmin and xmax:
         n1 = hist.Integral(hist.FindBin(xmin), hist.FindBin(xmax))
         n2 = other.Integral(other.FindBin(xmin), other.FindBin(xmax))
@@ -172,7 +174,7 @@ def normalize_to(hist, other, xmin=None, xmax=None):
     hist.Scale(s)
     return s
 
-def add_overflow_bin(hist):
+def histogram_add_overflow_bin(hist):
     """ add the overflow bin  content to
     the last bin """
 
@@ -191,7 +193,7 @@ def add_overflow_bin(hist):
     hist.SetBinError(last_bin, new_err)
     hist.SetBinError(over_bin, 0.0)
 
-def scale_hist(hist, c, err_c=None):
+def histogram_scale(hist, c, err_c=None):
     """ Scale histogram by a factor with error (c +- err_c)
 
     * c could be a Value(), or a number
@@ -212,7 +214,7 @@ def scale_hist(hist, c, err_c=None):
         err2 = (hist.GetBinContent(b+1) * err_c)**2 + (c * hist.GetBinError(b+1))**2
         hist.SetBinError(b+1, math.sqrt(err2))
 
-def get_cumulative_hist(hist, inverse_x=False, inverse_y=False):
+def get_cumulative_histogram(hist, inverse_x=False, inverse_y=False):
 
     newhist = hist.Clone(hist.GetName())
     nx = hist.GetNbinsX()
@@ -282,9 +284,6 @@ class HistManager:
     def __getitem__(self, key):
         return self.data[key]
 
-    def __getitem__(self, key):
-        return self.data[key]
-
     def __setitem__(self, key, item):
         self.data[key] = item
 
@@ -334,100 +333,28 @@ colourdict = {
 }
 
 def get_color(c):
-    if isinstance(c, str):
-        if c.startswith('#'):
-            colour = ROOT.TColor.GetColor(c)
-        else:
-            try:
-                colour = ROOT.TColor.GetColor(colourdict[c])
-            except KeyError:
-                if '+' in c:
-                    col, n = c.split('+')
-                    colour = getattr(ROOT, col)
-                    colour += int(n)
-                elif '-' in c:
-                    col, n = c.split('-')
-                    colour = getattr(ROOT, col)
-                    colour -= int(n)
-                else:
-                    colour = getattr(ROOT, c)
+
+    if not isinstance(c, str):
+        return c
+
+    if c.startswith('#'):
+        colour = ROOT.TColor.GetColor(c)
+    else:
+        try:
+            colour = ROOT.TColor.GetColor(colourdict[c])
+        except KeyError:
+            if '+' in c:
+                col, n = c.split('+')
+                colour = getattr(ROOT, col)
+                colour += int(n)
+            elif '-' in c:
+                col, n = c.split('-')
+                colour = getattr(ROOT, col)
+                colour -= int(n)
+            else:
+                colour = getattr(ROOT, c)
 
     return colour
-
-def set_color(obj, color, fill=False, alpha=None):
-    color = get_color(color)
-    obj.SetLineColor(color)
-    obj.SetMarkerColor(color)
-    if fill:
-        if alpha is not None:
-            obj.SetFillColorAlpha(color, alpha)
-        else:
-            obj.SetFillColor(color)
-
-def set_hist_style(hist, **kwargs):
-
-    color = kwargs.get('color', 'kBlack')
-    fill = kwargs.get('fill', False)
-
-    marker_style = kwargs.get('mstyle', 20)
-    fill_style = kwargs.get('fstyle', None)
-    line_style = kwargs.get('lstyle',None)
-
-    marker_size = kwargs.get('msize', 0.8)
-    line_width = kwargs.get('lwidth', 2)
-
-    # default
-    hist.SetStats(0)
-    hist.SetTitle('')
-
-    # color
-    set_color(hist, color, fill)
-
-    # marker
-    hist.SetMarkerStyle(marker_style)
-    hist.SetMarkerSize(marker_size)
-
-    # line
-    hist.SetLineWidth(line_width)
-    if line_style is not None:
-        hist.SetLineStyle(line_style)
-
-    # fill
-    if fill_style is not None:
-        hist.SetFillStyle(fill_style)
-
-def set_graph_style(graph, **kwargs):
-
-    color = kwargs.get('color', ROOT.kBlack)
-    fill = kwargs.get('fill', False)
-
-    marker_style = kwargs.get('mstyle', 20)
-    fill_style = kwargs.get('fstyle', None)
-    line_style = kwargs.get('lstyle',None)
-
-    marker_size = kwargs.get('msize', 0.8)
-    line_width = kwargs.get('lwidth', 2)
-
-    alpha = kwargs.get('alpha', None)
-
-    # default
-    graph.SetTitle('')
-
-    # color
-    set_color(graph, color, fill, alpha)
-
-    # marker
-    graph.SetMarkerStyle(marker_style)
-    graph.SetMarkerSize(marker_size)
-
-    # line
-    graph.SetLineWidth(line_width)
-    if line_style is not None:
-        graph.SetLineStyle(line_style)
-
-    # fill
-    if fill_style is not None:
-        graph.SetFillStyle(fill_style)
 
 def set_palette():
     s = array('d', [0.00, 0.34, 0.61, 0.84, 1.00])
@@ -453,6 +380,56 @@ def set_default_style():
     ROOT.gStyle.SetLabelFont(132, "XYZ")
     ROOT.gStyle.SetTitleFont(132, "XYZ")
     ROOT.gStyle.SetEndErrorSize(0)
+
+def set_color(obj, color, fill=False, alpha=None):
+    color = get_color(color)
+    obj.SetLineColor(color)
+    obj.SetMarkerColor(color)
+    if fill:
+        if alpha is not None:
+            obj.SetFillColorAlpha(color, alpha)
+        else:
+            obj.SetFillColor(color)
+
+
+def set_style(obj, **kwargs):
+
+    # check if hist or graph
+    is_hist = obj.InheritsFrom('TH1')
+
+    color = kwargs.get('color', 'kBlack')
+    fill = kwargs.get('fill', False)
+
+    marker_style = kwargs.get('mstyle', 20)
+    fill_style = kwargs.get('fstyle', None)
+    line_style = kwargs.get('lstyle',None)
+
+    marker_size = kwargs.get('msize', 0.8)
+    line_width = kwargs.get('lwidth', 2)
+
+    alpha = kwargs.get('alpha', None)
+
+    # default
+    obj.SetTitle('')
+    if ishist:
+        obj.SetStats(0)
+
+    # color
+    set_color(obj, color, fill, alpha)
+
+    # marker
+    obj.SetMarkerStyle(marker_style)
+    obj.SetMarkerSize(marker_size)
+
+    # line
+    obj.SetLineWidth(line_width)
+    if line_style is not None:
+        obj.SetLineStyle(line_style)
+
+    # fill
+    if fill_style is not None:
+        obj.SetFillStyle(fill_style)
+
 
 def canvas(name='', title=None, xsize=None, ysize=None):
     if title is None:
