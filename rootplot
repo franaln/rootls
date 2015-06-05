@@ -15,7 +15,7 @@ except ImportError:
 ROOT.PyConfig.IgnoreCommandLineOptions = True
 ROOT.gROOT.SetBatch(True)
 
-from rootutils import *
+from rootutils.rootutils import *
 
 # colors
 green  = '\033[92m'

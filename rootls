@@ -223,6 +223,10 @@ def main():
             elif obj.InheritsFrom('TTree'):
                 print_tree(obj, args)
 
+            elif obj.InheritsFrom('RooWorkspace'):
+                obj.Print()
+
+
         else:
             print('object %s does not exist' % root_path)
 
