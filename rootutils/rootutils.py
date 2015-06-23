@@ -460,3 +460,15 @@ def draw_latex(x, y, text, size=None, ndc=False):
         l.SetTextSize(size)
 
     l.Draw()
+
+#
+def get_histogram(filename, treename, variable, selection='', hist=None):
+
+    t = ROOT.TChain(treename)
+    t.Add(filename)
+
+    t.Draw(variable+'>>htemp', '', 'goff')
+
+    h = ROOT.gDirectory.Get('htemp')
+
+    return h.Clone()
