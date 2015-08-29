@@ -59,8 +59,8 @@ def main():
     objects = []
     for path in args.objpath:
 
-        file_path, root_path = path.split('/')
-
+        file_path, root_path = path.split('/', 1)
+        print(file_path, root_path)
         # check root file
         if not os.path.isfile(file_path):
             print('%s is not a file' % file_path)
@@ -100,7 +100,8 @@ def main():
                 obj.Draw(s_root_path[1]+'>>htmp', '', 'goff')
 
                 hist = ROOT.gDirectory.Get('htmp')
-
+                hist.SetDirectory(0)
+                ROOT.SetOwnership(hist, False)
                 objects.append(hist)
 
 
@@ -128,8 +129,12 @@ def main():
     if args.logz:
         canvas.SetLogz()
 
-    for obj in objects:
-        obj.Draw()
+    obj1 = objects[0]
+    set_hist_style(obj1, color='blue')
+    obj1.Draw()
+    for obj in objects[1:]:
+        set_hist_style(obj, color='red')
+        obj.Draw('same')
 
     outname = args.output if args.output is not None else 'test.pdf'
     canvas.SaveAs(outname)

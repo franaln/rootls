@@ -519,3 +519,20 @@ def draw_latex(x, y, text, size=None, ndc=False):
         l.SetTextSize(size)
 
     l.Draw()
+
+#
+def get_histogram(filename, treename, variable, selection='', xmin=None, xmax=None, bins=None, hist=None):
+
+    t = ROOT.TChain(treename)
+    t.Add(filename)
+
+    hist = None
+    if xmin is not None and xmax is not None and bins is not None:
+        hist = histogram('htemp', bins, xmin, xmax)
+
+    t.Draw(variable+'>>htemp', '', 'goff')
+
+    if hist is None:
+        hist = ROOT.gDirectory.Get('htemp')
+
+    return hist.Clone()
