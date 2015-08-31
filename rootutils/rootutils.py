@@ -153,7 +153,9 @@ def histogram2d(name, nx=None, xmin=None, xmax=None, ny=None, ymin=None, ymax=No
 
     return hist
 
-def histogram_equal_to(hist):
+def histogram_equal_to(hist, name=None):
+    if name is None:
+        name = hist.GetName()
     newhist = hist.Clone(name)
     newhist.Reset()
     return newhist
@@ -381,6 +383,63 @@ def set_default_style():
     ROOT.gStyle.SetTitleFont(132, "XYZ")
     ROOT.gStyle.SetEndErrorSize(0)
 
+def set_atlas_style():
+
+    # use plain black on white colors
+    icol = 0
+    ROOT.gStyle.SetFrameBorderMode(icol)
+    ROOT.gStyle.SetFrameFillColor(icol)
+    ROOT.gStyle.SetCanvasBorderMode(icol)
+    ROOT.gStyle.SetCanvasColor(icol)
+    ROOT.gStyle.SetPadBorderMode(icol)
+    ROOT.gStyle.SetPadColor(icol)
+    ROOT.gStyle.SetStatColor(icol)
+
+    # set the paper & margin sizes
+    ROOT.gStyle.SetPaperSize(20,26)
+
+    # set margin sizes
+    ROOT.gStyle.SetPadTopMargin(0.05)
+    ROOT.gStyle.SetPadRightMargin(0.05)
+    ROOT.gStyle.SetPadBottomMargin(0.16)
+    ROOT.gStyle.SetPadLeftMargin(0.16)
+
+    # set title offsets (for axis label)
+    ROOT.gStyle.SetTitleXOffset(1.4)
+    ROOT.gStyle.SetTitleYOffset(1.4)
+
+    # use large fonts
+    font = 42 # Helvetica
+    tsize = 0.05
+    ROOT.gStyle.SetTextFont(font)
+    ROOT.gStyle.SetTextSize(tsize)
+    ROOT.gStyle.SetLabelFont(font, "x")
+    ROOT.gStyle.SetTitleFont(font, "x")
+    ROOT.gStyle.SetLabelFont(font, "y")
+    ROOT.gStyle.SetTitleFont(font, "y")
+    ROOT.gStyle.SetLabelFont(font, "z")
+    ROOT.gStyle.SetTitleFont(font, "z")
+
+    ROOT.gStyle.SetLabelSize(tsize, "x")
+    ROOT.gStyle.SetTitleSize(tsize, "x")
+    ROOT.gStyle.SetLabelSize(tsize, "y")
+    ROOT.gStyle.SetTitleSize(tsize, "y")
+    ROOT.gStyle.SetLabelSize(tsize, "z")
+    ROOT.gStyle.SetTitleSize(tsize, "z")
+
+    # use bold lines and markers
+    ROOT.gStyle.SetMarkerStyle(20)
+    ROOT.gStyle.SetMarkerSize(1.2)
+    ROOT.gStyle.SetHistLineWidth(2)
+    ROOT.gStyle.SetLineStyleString(2, "[12 12]")
+    ROOT.gStyle.SetEndErrorSize(0.)
+
+    # do not display any of the standard histogram decorations
+    ROOT.gStyle.SetOptTitle(0)
+    ROOT.gStyle.SetOptStat(0)
+    ROOT.gStyle.SetOptFit(0)
+
+
 def set_color(obj, color, fill=False, alpha=None):
     color = get_color(color)
     obj.SetLineColor(color)
@@ -462,16 +521,18 @@ def draw_latex(x, y, text, size=None, ndc=False):
     l.Draw()
 
 #
-def get_histogram(filename, treename, variable, selection='', hist=None):
+def get_histogram(filename, treename, variable, selection='', xmin=None, xmax=None, bins=None, hist=None):
 
     t = ROOT.TChain(treename)
     t.Add(filename)
 
+    hist = None
+    if xmin is not None and xmax is not None and bins is not None:
+        hist = histogram('htemp', bins, xmin, xmax)
+
     t.Draw(variable+'>>htemp', '', 'goff')
 
-    h = ROOT.gDirectory.Get('htemp')
+    if hist is None:
+        hist = ROOT.gDirectory.Get('htemp')
 
-    return h.Clone()
-
-def plot():
-    pass
+    return hist.Clone()
