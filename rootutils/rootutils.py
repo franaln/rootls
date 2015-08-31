@@ -472,3 +472,6 @@ def get_histogram(filename, treename, variable, selection='', hist=None):
     h = ROOT.gDirectory.Get('htemp')
 
     return h.Clone()
+
+def plot():
+    pass

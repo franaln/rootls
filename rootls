@@ -7,6 +7,9 @@ import sys
 import argparse
 from rootutils.prettytable import PrettyTable
 
+import signal
+signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+
 try:
     import ROOT
 except ImportError:
@@ -15,6 +18,7 @@ except ImportError:
 
 ROOT.PyConfig.IgnoreCommandLineOptions = True
 ROOT.gROOT.SetBatch(True)
+
 
 # colors
 green  = '\033[92m'
