@@ -107,6 +107,16 @@ def print_tree(tree, args):
     if args.getentries:
         print(tree.GetEntries())
 
+    elif args.count:
+
+        hist = ROOT.TH1F('count', 'count', 1, 0.5, 1.5)
+        tree.Project('count', '1', args.selection)
+
+        error = ROOT.Double(0.0)
+        integral = hist.IntegralAndError(1, hist.GetNbinsX(), error)
+
+        print('%.2f +- %.2f' % (integral, error))
+
     elif args.scan:
         scan_tree(tree, args.scan, args.selection, args.sort)
 
@@ -132,9 +142,9 @@ def main():
     parser.add_argument('--scan')
     parser.add_argument('--sort')
 
-
     parser.add_argument('-ge', '--getentries', action='store_true')
     parser.add_argument('-s', '--selection', default='')
+    parser.add_argument('-ce', '--count', action='store_true')
 
     ## histogram options
     parser.add_argument('-gb', '--getbin')
