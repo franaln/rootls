@@ -413,6 +413,7 @@ def set_atlas_style():
     tsize = 0.05
     ROOT.gStyle.SetTextFont(font)
     ROOT.gStyle.SetTextSize(tsize)
+    #ROOT.gStyle.SetLegendTextFont(font)
     ROOT.gStyle.SetLabelFont(font, "x")
     ROOT.gStyle.SetTitleFont(font, "x")
     ROOT.gStyle.SetLabelFont(font, "y")
@@ -490,14 +491,11 @@ def set_style(obj, **kwargs):
         obj.SetFillStyle(fill_style)
 
 
-def canvas(name='', title=None, xsize=None, ysize=None):
-    if title is None:
+def canvas(name='', title='', xsize=600, ysize=600):
+    if not title:
         title = name
-    if xsize is None or ysize is None:
-        xsize, ysize = 800, 800
     c = ROOT.TCanvas(name, title, xsize, ysize)
     ROOT.SetOwnership(c, False)
-    #c.SetTopMargin(0.04)
     return c
 
 def legend(xmin, ymin, xmax, ymax, columns=1):
