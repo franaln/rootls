@@ -20,20 +20,11 @@ ROOT.PyConfig.IgnoreCommandLineOptions = True
 ROOT.gROOT.SetBatch(True)
 
 
-# colors
-green  = '\033[92m'
-red    = '\033[91m'
-blue   = '\033[94m'
-purple = '\033[95m'
-endc   = '\033[0m'
-
-
 def str_to_num(s):
     try:
         return int(s)
     except ValueError:
         return float(s)
-
 
 
 #------------
@@ -43,10 +34,11 @@ def print_hist_all(hist):
 
     labels = []
     values = []
-    for b in xrange(hist.GetNbinsX()):
+    for b in range(hist.GetNbinsX()):
         label = hist.GetXaxis().GetBinLabel(b+1)
         if not label:
-            label = 'bin %.2i' % (b+1)
+            #label = 'bin %.2i' % (b+1)
+            label = '[%.2f, %.2f]' % (hist.GetXaxis().GetBinLowEdge(b+1), hist.GetXaxis().GetBinUpEdge(b+1))
 
         labels.append(label)
         values.append((hist.GetBinContent(b+1), hist.GetBinError(b+1)))
@@ -84,11 +76,11 @@ def scan_tree(tree, fields, selection, sort=None):
     nrows = res.GetRowCount()
     nfields = res.GetFieldCount()
 
-    fields = [res.GetFieldName(j) for j in xrange(nfields)]
+    fields = [res.GetFieldName(j) for j in range(nfields)]
     rows = []
-    for i in xrange(nrows):
+    for i in range(nrows):
         row = res.Next()
-        rows.append([str_to_num(row.GetField(j)) for j in xrange(nfields)])
+        rows.append([str_to_num(row.GetField(j)) for j in range(nfields)])
 
 
     # build table
@@ -135,19 +127,21 @@ def main():
     parser.add_argument('rootpath', nargs='?')
 
     ## general options
-    parser.add_argument('--del', dest='delete', action='store_true')
-    parser.add_argument('-t', '--type', action='store_true', help='')
+    parser.add_argument('--del', dest='delete', action='store_true', help='Caution! Delete all objects with this name. ')
+    parser.add_argument('-t', '--type', action='store_true', help='Show object type')
 
     ## tree options
-    parser.add_argument('--scan')
-    parser.add_argument('--sort')
+    parser.add_argument('-s', '--selection', default='', help='Apply selection to tree')
 
-    parser.add_argument('-ge', '--getentries', action='store_true')
-    parser.add_argument('-s', '--selection', default='')
+    parser.add_argument('--scan', help='Scan tree. Similar to TTree::Scan')
+    parser.add_argument('--sort', help='Sort scan output by this column')
+
+    parser.add_argument('-ge', '--getentries', action='store_true', help='Print tree entries')
     parser.add_argument('-ce', '--count', action='store_true')
 
     ## histogram options
-    parser.add_argument('-gb', '--getbin')
+    parser.add_argument('-gb', '--getbin', help='Show bin content for this bin')
+
 
     if len(sys.argv) < 2:
         parser.print_usage()
@@ -160,16 +154,29 @@ def main():
     # dir with root files
     if os.path.isdir(file_path):
 
-        dir_content = [ os.path.join(file_path, fn) for fn in os.listdir(file_path) if '.root' in fn ]
+        dir_content = [ os.path.join(file_path, fn) for fn in os.listdir(file_path) if 'root' in fn ]
 
         if len(dir_content) == 0:
             print('directory is empty')
             return 1
 
+
+        if root_path is None:
+
+            f0 = ROOT.TFile.Open(dir_content[0])
+            keys = f0.GetListOfKeys()
+
+            for key in keys:
+                if args.type:
+                    print('%s [%s]' % (key.GetName(), key.GetClassName()))
+                else:
+                    print(key.GetName())
+
         # assume all files in dir have the same tree with this name
         if root_path is not None:
 
-            obj = ROOT.TFile.Open(dir_content[0]).Get(root_path)
+            f0 = ROOT.TFile.Open(dir_content[0])
+            obj = f0.Get(root_path)
 
             # tree
             if obj.InheritsFrom('TTree'):
@@ -195,6 +202,9 @@ def main():
                     hist.Add(h, 1.0)
 
                 print_hist(hist, args)
+
+
+
 
         return
 

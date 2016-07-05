@@ -327,7 +327,7 @@ colourdict = {
     'turquoise':   '#188487',
     'red':         '#A60628',
     'pink':        '#CF4457',
-    'green':       '#467821',
+    'green':       '#32b43c',
     'yellow':      '#e2a233',
     'lyellow':     '#f7fab3',
     'grey':        '#838283',
