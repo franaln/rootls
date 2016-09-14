@@ -105,17 +105,17 @@ def main():
         diff_mean = False
         diff_rms = False
 
-        if h1.GetEntries() != h2.GetEntries():
-            diff_entries = True
+        entries_1 = h1.GetEntries()
+        entries_2 = h2.GetEntries()
 
-        if h1.GetMean() != h2.GetMean():
-            diff_mean = True
+        mean_1 = h1.GetMean()
+        mean_2 = h2.GetMean()
 
-        if h1.GetRMS() != h2.GetRMS():
-            diff_rms = True
+        rms_1 = h1.GetRMS()
+        rms_2 = h2.GetRMS()
 
-        if diff_entries or diff_mean or diff_rms:
-            print('Variable ' + var + ' is different: Entries ' + str(diff_entries) + ', Mean ' + str(diff_mean) + ', RMS ' + str(diff_rms))
+        if (entries_1 != entries_2) or (mean_1 != mean_2) or (rms_1 != rms_2):
+            print('Difference in %s (Entries, Mean, RMS): (%i, %.2f, %.2f) != (%i, %.2f, %.2f)' % (var, entries_1, mean_1, rms_1, entries_2, mean_2, rms_2))
 
 
 
