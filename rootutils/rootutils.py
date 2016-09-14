@@ -296,7 +296,7 @@ class HistManager:
 #--------
 # Graphs
 #--------
-def sort_graph(g):
+def sort_graph(g, sort_x=True):
 
     ax = array('f', [])
     ay = array('f', [])
@@ -310,9 +310,14 @@ def sort_graph(g):
         g.GetPoint(i, xtmp, ytmp)
         d[xtmp] = ytmp
 
-    for x, y in sorted(d.iteritems()):
-        ax.append(x)
-        ay.append(y)
+    if sort_x:
+        for x, y in sorted(d.iteritems()):
+            ax.append(x)
+            ay.append(y)
+    else:
+        for x, y in sorted(d, key=d.get):
+            ax.append(x)
+            ay.append(y)
 
     return ROOT.TGraph(g.GetN(), ax, ay)
 
@@ -498,6 +503,28 @@ def canvas(name='', title='', xsize=600, ysize=600):
     ROOT.SetOwnership(c, False)
     return c
 
+def canvas_ratio(name='', title='', xsize=600, ysize=600):
+
+    c = ROOT.TCanvas()
+
+    cup   = ROOT.TPad("u", "u", 0., 0.305, 0.99, 1)
+    cdown = ROOT.TPad("d", "d", 0., 0.01, 0.99, 0.295)
+    cup.SetRightMargin(0.05)
+    cup.SetBottomMargin(0.005)
+
+    cup.SetTickx()
+    cup.SetTicky()
+    cdown.SetTickx()
+    cdown.SetTicky()
+    cdown.SetRightMargin(0.05)
+    cdown.SetBottomMargin(0.3)
+    cdown.SetTopMargin(0.0054)
+    cdown.SetFillColor(ROOT.kWhite)
+    cup.Draw()
+    cdown.Draw()
+
+    return cup, cdown
+
 def legend(xmin, ymin, xmax, ymax, columns=1):
     leg = ROOT.TLegend(xmin, ymin, xmax, ymax)
     leg.SetFillColor(0)
@@ -517,6 +544,36 @@ def draw_latex(x, y, text, size=None, ndc=False):
         l.SetTextSize(size)
 
     l.Draw()
+
+def draw_horizontal_line(y):
+
+    l = ROOT.TLine(0, 220, 200, 220)
+    l.SetLineStyle(2)
+    l.SetLineColor(ROOT.kGray+1)
+    l.Draw()
+
+def draw_ratio_lines(ratio):
+
+    firstbin = ratio.GetXaxis().GetFirst()
+    lastbin  = ratio.GetXaxis().GetLast()
+    xmax     = ratio.GetXaxis().GetBinUpEdge(lastbin)
+    xmin     = ratio.GetXaxis().GetBinLowEdge(firstbin)
+
+    lines = [None, None, None,]
+    lines[0] = ROOT.TLine(xmin, 1., xmax, 1.)
+    lines[1] = ROOT.TLine(xmin, 0.5,xmax, 0.5)
+    lines[2] = ROOT.TLine(xmin, 1.5,xmax, 1.5)
+
+    lines[0].SetLineWidth(1)
+    lines[0].SetLineStyle(2)
+    lines[1].SetLineStyle(3)
+    lines[2].SetLineStyle(3)
+
+    for line in lines:
+        line.AppendPad()
+        line.Draw()
+
+
 
 #
 def get_histogram(filename, treename, variable, selection='', xmin=None, xmax=None, bins=None, hist=None):

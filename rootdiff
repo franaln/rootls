@@ -6,6 +6,12 @@ import os
 import sys
 import argparse
 
+try:
+    import ROOT
+except ImportError:
+    print('Error importing ROOT. Exiting...')
+    sys.exit(1)
+
 def main():
 
     parser = argparse.ArgumentParser(description='')
@@ -13,21 +19,6 @@ def main():
     ## paths
     parser.add_argument('filepath1', nargs='?')
     parser.add_argument('filepath2', nargs='?')
-
-    # ## general options
-    # parser.add_argument('--del', dest='delete', action='store_true')
-    # parser.add_argument('-t', '--type', action='store_true', help='')
-
-    # ## tree options
-    # parser.add_argument('--scan')
-    # parser.add_argument('--sort')
-
-    # parser.add_argument('-ge', '--getentries', action='store_true')
-    # parser.add_argument('-s', '--selection', default='')
-    # parser.add_argument('-ce', '--count', action='store_true')
-
-    # ## histogram options
-    # parser.add_argument('-gb', '--getbin')
 
     args = parser.parse_args()
 
@@ -37,8 +28,96 @@ def main():
         parser.print_usage()
         return 1
 
+    # file 1
+    if not os.path.isfile(file_path_1):
+        print('%s is not a file' % file_path_1)
+        return 1
 
-    print('Implement diff between file1 and file2')
+    try:
+        fin1 = ROOT.TFile.Open(file_path_1)
+
+        if fin1.IsZombie():
+            print('Error opening rootfile')
+            fin1.Close()
+            return 1
+    except ReferenceError:
+        return 1
+
+    # file 2
+    if not os.path.isfile(file_path_2):
+        print('%s is not a file' % file_path_2)
+        return 1
+
+    try:
+        fin2 = ROOT.TFile.Open(file_path_2)
+
+        if fin2.IsZombie():
+            print('Error opening rootfile')
+            fin2.Close()
+            return 1
+    except ReferenceError:
+        return 1
+
+
+    # compare content
+    keys1 = [ key for key in fin1.GetListOfKeys() ]
+    keys2 = [ key for key in fin2.GetListOfKeys() ]
+
+    names1 = [ key.GetName() for key in keys1 ]
+    names2 = [ key.GetName() for key in keys2 ]
+
+    if names1 != names2:
+        print('** Different key content!')
+
+    if not ('mini' in names1 and 'mini' in names2):
+        return
+
+    tree1 = fin1.Get('mini')
+    tree2 = fin2.Get('mini')
+
+    branches2 = [branch.GetName() for branch in tree2.GetListOfLeaves()]
+
+    if tree1.GetEntries() != tree2.GetEntries():
+        print('** Different number of entries in mini ntuples')
+
+    for branch in tree1.GetListOfLeaves():
+
+        var = branch.GetName()
+
+        if not var in branches2:
+            print('Variable ' + var + ' not in file2')
+            continue
+
+        hname_1 = '%s_1' % var
+        exp1 = '%s>>%s' % (var, hname_1)
+
+        hname_2 = '%s_2' % var
+        exp2 = '%s>>%s' % (var, hname_2)
+
+        tree1.Draw(exp1, '', 'goff')
+        h1 = ROOT.gDirectory.Get(hname_1)
+
+        tree2.Draw(exp2, '', 'goff')
+        h2 = ROOT.gDirectory.Get(hname_2)
+
+        # compare histograms
+        diff_entries = False
+        diff_mean = False
+        diff_rms = False
+
+        if h1.GetEntries() != h2.GetEntries():
+            diff_entries = True
+
+        if h1.GetMean() != h2.GetMean():
+            diff_mean = True
+
+        if h1.GetRMS() != h2.GetRMS():
+            diff_rms = True
+
+        if diff_entries or diff_mean or diff_rms:
+            print('Variable ' + var + ' is different: Entries ' + str(diff_entries) + ', Mean ' + str(diff_mean) + ', RMS ' + str(diff_rms))
+
+
 
 
 if __name__ == '__main__':

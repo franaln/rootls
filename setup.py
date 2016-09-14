@@ -12,6 +12,6 @@ setup(
     author_email='franaln@gmail.com',
     license='',
     packages=['rootutils',],
-    scripts=['rootls', 'rootplot'],
+    scripts=['rootls', 'rootdiff', 'rootplot', 'plothists'],
     zip_safe=False,
 )

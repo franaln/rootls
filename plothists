@@ -1,0 +1,147 @@
+#! /usr/bin/env python
+
+import os
+import sys
+import glob
+import argparse
+
+try:
+    import ROOT
+except ImportError:
+    print('Error importing ROOT. Exiting...')
+    sys.exit(1)
+
+ROOT.PyConfig.IgnoreCommandLineOptions = True
+ROOT.gROOT.SetBatch(True)
+
+try:
+    xrange(10)
+except NameError:
+    xrange = range
+
+from rootutils.rootutils import set_style
+
+
+def main():
+
+    parser = argparse.ArgumentParser(description='')
+
+    parser.add_argument('filepaths', nargs='+')
+
+    # parser.add_argument('-i', dest='inputfile', help='input file')
+    # parser.add_argument('-t', dest='treename', help='tree name')
+
+    # parser.add_argument('-s', dest='selection', help='selection (separated by comma)')
+    # parser.add_argument('-w', dest='weight', help='use this weight')
+
+    parser.add_argument('--colors', help='Colors')
+    parser.add_argument('--labels', help='Labels')
+
+    parser.add_argument('--norm', action='store_true')
+
+
+    global args
+    args = parser.parse_args()
+
+    if len(sys.argv) < 2:
+        parser.print_usage()
+        sys.exit(1)
+
+    file_paths = args.filepaths
+
+    colors = [
+        ROOT.kBlack,
+        'red',
+        'blue',
+        'green',
+        'purple',
+        ]
+
+    if args.colors is not None:
+        colors = args.colors.split(',')
+
+    if args.labels is not None:
+        labels = args.labels.split(',')
+    else:
+        labels = [ 'file%i' % i for i in xrange(len(file_paths)) ]
+
+    files = []
+    for file_path in file_paths:
+        try:
+            fin = ROOT.TFile.Open(file_path)
+
+            if fin.IsZombie():
+                print('Error opening rootfile')
+                fin.Close()
+                return 1
+
+            files.append(fin)
+
+        except ReferenceError:
+            return 1
+
+
+    key_names = [ key.GetName() for key in files[0].GetListOfKeys() ]
+
+    for key in key_names:
+
+        # histograms
+        histograms = []
+        labels = []
+
+        for file_ in files:
+
+            obj = file_.Get(key)
+
+            if not obj.InheritsFrom('TH1'):
+                continue
+
+            histograms.append(obj)
+
+
+            # leg = '%s (sel%i)' % (labels[i], j)
+
+            # hname = '%s_%i_%i' % (variable, i, j)
+            # exp = '%s>>%s' % (variable, hname)
+
+            # ntuple.Draw(exp, selection, 'goff')
+            # histograms.append(ROOT.gDirectory.Get(hname))
+            # legend_labels.append(leg)
+
+
+        if args.norm:
+            norm = histograms[0].Integral()
+            for hist in histograms[1:]:
+                if hist.Integral() > 0.:
+                    hist.Scale(norm/hist.Integral())
+
+        # plot
+        canvas = ROOT.TCanvas()
+
+        for hist, col in zip(histograms, colors):
+            set_style(hist, color=col)
+
+        histograms[0].Draw()
+
+        for hist in histograms[1:]:
+            hist.Draw('same')
+
+        # legend
+        if len(labels) > 1:
+            legend = ROOT.TLegend(0.6, 0.6, 0.95, 0.95)
+            legend.SetFillColor(0)
+            legend.SetBorderSize(0)
+
+            for hist, label in zip(histograms, labels):
+                legend.AddEntry(hist, label)
+
+            legend.Draw()
+
+        canvas.Print(key + '.pdf')
+
+
+
+
+
+if __name__ == '__main__':
+    main()
