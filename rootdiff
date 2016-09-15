@@ -75,14 +75,13 @@ def main():
     tree1 = fin1.Get('mini')
     tree2 = fin2.Get('mini')
 
+    branches1 = [branch.GetName() for branch in tree1.GetListOfLeaves()]
     branches2 = [branch.GetName() for branch in tree2.GetListOfLeaves()]
 
     if tree1.GetEntries() != tree2.GetEntries():
         print('** Different number of entries in mini ntuples')
 
-    for branch in tree1.GetListOfLeaves():
-
-        var = branch.GetName()
+    for var in branches1:
 
         if not var in branches2:
             print('Variable ' + var + ' not in file2')
@@ -101,10 +100,6 @@ def main():
         h2 = ROOT.gDirectory.Get(hname_2)
 
         # compare histograms
-        diff_entries = False
-        diff_mean = False
-        diff_rms = False
-
         entries_1 = h1.GetEntries()
         entries_2 = h2.GetEntries()
 
@@ -118,7 +113,12 @@ def main():
             print('Difference in %s (Entries, Mean, RMS): (%i, %.2f, %.2f) != (%i, %.2f, %.2f)' % (var, entries_1, mean_1, rms_1, entries_2, mean_2, rms_2))
 
 
+    for var in branches2:
 
+        if not var in branches1:
+            print('Variable ' + var + ' not in file1')
+        else:
+            continue
 
 if __name__ == '__main__':
     main()
