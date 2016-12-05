@@ -233,26 +233,36 @@ def histogram2d_add_overflow_bin(hist):
         hist.SetBinError(over_bin_x, by+1, 0.0)
 
 
-def histogram_scale(hist, c, err_c=None):
-    """ Scale histogram by a factor with error (c +- err_c)
+def histogram_scale(hist, c, e_c=None):
+    """ Scale histogram by a factor with error (c +- e_c)
 
     * c could be a Value(), or a number
-    * err_c could be a number or None.
+    * e_c could be a number or None.
     * If error is None and c is not a Value(), it does the same as TH1.Scale()
     """
     try:
-        c, err_c = c.mean, c.error
+        c, e_c = c.mean, c.error
     except AttributeError:
         pass
 
-    if err_c is None:
+    if e_c is None:
         hist.Scale(c)
         return
 
-    for b in xrange(hist.GetNbinsX()):
-        hist.SetBinContent(b+1, hist.GetBinContent(b+1) * c)
-        err2 = (hist.GetBinContent(b+1) * err_c)**2 + (c * hist.GetBinError(b+1))**2
-        hist.SetBinError(b+1, math.sqrt(err2))
+    for b in xrange(1, hist.GetNbinsX()+1):
+        n_b = hist.GetBinContent(b)
+        e_b = hist.GetBinError(b+1)
+
+        new_n = n_b * c 
+
+        try:
+            err2 = (e_b/n_b)**2 + (e_c/c)**2
+            new_e = new_n * math.sqrt(err2)
+        except ZeroDivisionError:
+            new_e = 0
+
+        hist.SetBinContent(b, new_n)
+        hist.SetBinError  (b, new_e)
 
 def get_cumulative_histogram(hist, inverse_x=False, inverse_y=False):
 
