@@ -248,10 +248,9 @@ def histogram_scale(hist, c, e_c=None):
     if e_c is None:
         hist.Scale(c)
         return
-
     for b in xrange(1, hist.GetNbinsX()+1):
         n_b = hist.GetBinContent(b)
-        e_b = hist.GetBinError(b+1)
+        e_b = hist.GetBinError(b)
 
         new_n = n_b * c 
 
