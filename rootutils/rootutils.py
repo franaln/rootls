@@ -231,7 +231,7 @@ def histogram2d_add_overflow_bin(hist):
 
     over_bin_x = last_bin_x + 1
     over_bin_y = last_bin_y + 1
-    
+
     for bx in xrange(hist.GetNbinsX()):
 
         new_val = hist.GetBinContent(bx+1, last_bin_y) + hist.GetBinContent(bx+1, over_bin_y)
@@ -276,7 +276,7 @@ def histogram_scale(hist, c, e_c=None):
         n_b = hist.GetBinContent(b)
         e_b = hist.GetBinError(b)
 
-        new_n = n_b * c 
+        new_n = n_b * c
 
         try:
             err2 = (e_b/n_b)**2 + (e_c/c)**2
@@ -286,6 +286,7 @@ def histogram_scale(hist, c, e_c=None):
 
         hist.SetBinContent(b, new_n)
         hist.SetBinError  (b, new_e)
+
 
 def get_cumulative_histogram(hist, inverse_x=False, inverse_y=False):
 
@@ -404,6 +405,7 @@ colourdict = {
     'red':         '#A60628',
     'pink':        '#CF4457',
     'green':       '#32b43c',
+    'lgreen':      '#88de8f',
     'yellow':      '#e2a233',
     'lyellow':     '#f7fab3',
     'grey':        '#838283',
