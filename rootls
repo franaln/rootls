@@ -68,7 +68,7 @@ def print_hist(hist, args):
 #-------
 # Trees
 #-------
-def scan_tree(tree, fields, selection, sort=None):
+def scan_tree(tree, fields, selection, sort=None, format_=False):
 
     # get query
     res = tree.Query(fields, selection)
@@ -86,7 +86,10 @@ def scan_tree(tree, fields, selection, sort=None):
     # build table
     table = PrettyTable(fields)
     for row in rows:
-        table.add_row(row)
+        if format_:
+            table.add_row([ format_ % f for f in row])
+        else:
+            table.add_row(row)
 
     table.sortby = sort
     table.align = 'r'
@@ -110,7 +113,7 @@ def print_tree(tree, args):
         print('%.2f +- %.2f' % (integral, error))
 
     elif args.scan:
-        scan_tree(tree, args.scan, args.selection, args.sort)
+        scan_tree(tree, args.scan, args.selection, args.sort, args.format)
 
     else:
         for b in tree.GetListOfLeaves():
@@ -142,6 +145,7 @@ def main():
     ## histogram options
     parser.add_argument('-gb', '--getbin', help='Show bin content for this bin')
 
+    parser.add_argument('--format', help='')
 
     if len(sys.argv) < 2:
         parser.print_usage()
@@ -234,6 +238,14 @@ def main():
                 print(key.GetName())
 
     else:
+
+        if '/' in root_path:
+            spath = root_path.split('/')
+
+            if spath[0] in [ key.GetName() for key in keys ]:
+                fin.cd(spath[0])
+                root_path = spath[1]
+
 
         if args.delete:
             fin.ReOpen('update')

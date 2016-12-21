@@ -211,7 +211,7 @@ def histogram_scale(hist, c, err_c=None):
         hist.Scale(c)
         return
 
-    for b in xrange(self.GetNbinsX()):
+    for b in range(hist.GetNbinsX()):
         hist.SetBinContent(b+1, hist.GetBinContent(b+1) * c)
         err2 = (hist.GetBinContent(b+1) * err_c)**2 + (c * hist.GetBinError(b+1))**2
         hist.SetBinError(b+1, math.sqrt(err2))
@@ -333,6 +333,7 @@ colourdict = {
     'red':         '#A60628',
     'pink':        '#CF4457',
     'green':       '#32b43c',
+    'lgreen':      '#88de8f',
     'yellow':      '#e2a233',
     'lyellow':     '#f7fab3',
     'grey':        '#838283',
