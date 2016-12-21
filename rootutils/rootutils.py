@@ -14,7 +14,10 @@ class Value(object):
         self.error = error
 
     def __repr__(self):
-        return '{:.2f} +- {:.2f}'.format(self.mean, self.error)
+        if self.mean < 0.01:
+            return '{:.4f} +- {:.4f}'.format(self.mean, self.error)
+        else:
+            return '{:.2f} +- {:.2f}'.format(self.mean, self.error)
 
     def __add__(self, other):
         mean = self.mean + other.mean
@@ -195,26 +198,71 @@ def histogram_add_overflow_bin(hist):
     hist.SetBinError(last_bin, new_err)
     hist.SetBinError(over_bin, 0.0)
 
-def histogram_scale(hist, c, err_c=None):
-    """ Scale histogram by a factor with error (c +- err_c)
+def histogram2d_add_overflow_bin(hist):
+    """ add the overflow bin  content to
+    the last bin """
+
+    last_bin_x = hist.GetNbinsX()
+    last_bin_y = hist.GetNbinsY()
+
+    over_bin_x = last_bin_x + 1
+    over_bin_y = last_bin_y + 1
+
+    for bx in xrange(hist.GetNbinsX()):
+
+        new_val = hist.GetBinContent(bx+1, last_bin_y) + hist.GetBinContent(bx+1, over_bin_y)
+        hist.SetBinContent(bx+1, last_bin_y, new_val)
+        hist.SetBinContent(bx+1, over_bin_y, 0.0)
+
+        e1 = hist.GetBinError(bx+1, last_bin_y)
+        e2 = hist.GetBinError(bx+1, over_bin_y)
+        new_err = math.sqrt(e1*e1 + e2*e2)
+        hist.SetBinError(bx+1, last_bin_y, new_err)
+        hist.SetBinError(bx+1, over_bin_y, 0.0)
+
+    for by in xrange(hist.GetNbinsY()):
+
+        new_val = hist.GetBinContent(last_bin_x, by+1) + hist.GetBinContent(over_bin_x, by+1)
+        hist.SetBinContent(last_bin_x, by+1, new_val)
+        hist.SetBinContent(over_bin_x, by+1, 0.0)
+
+        e1 = hist.GetBinError(last_bin_x, bx+1)
+        e2 = hist.GetBinError(over_bin_x, bx+1)
+        new_err = math.sqrt(e1*e1 + e2*e2)
+        hist.SetBinError(last_bin_x, by+1, new_err)
+        hist.SetBinError(over_bin_x, by+1, 0.0)
+
+
+def histogram_scale(hist, c, e_c=None):
+    """ Scale histogram by a factor with error (c +- e_c)
 
     * c could be a Value(), or a number
-    * err_c could be a number or None.
+    * e_c could be a number or None.
     * If error is None and c is not a Value(), it does the same as TH1.Scale()
     """
     try:
-        c, err_c = c.mean, c.error
+        c, e_c = c.mean, c.error
     except AttributeError:
         pass
 
-    if err_c is None:
+    if e_c is None:
         hist.Scale(c)
         return
+    for b in xrange(1, hist.GetNbinsX()+1):
+        n_b = hist.GetBinContent(b)
+        e_b = hist.GetBinError(b)
 
-    for b in range(hist.GetNbinsX()):
-        hist.SetBinContent(b+1, hist.GetBinContent(b+1) * c)
-        err2 = (hist.GetBinContent(b+1) * err_c)**2 + (c * hist.GetBinError(b+1))**2
-        hist.SetBinError(b+1, math.sqrt(err2))
+        new_n = n_b * c
+
+        try:
+            err2 = (e_b/n_b)**2 + (e_c/c)**2
+            new_e = new_n * math.sqrt(err2)
+        except ZeroDivisionError:
+            new_e = 0
+
+        hist.SetBinContent(b, new_n)
+        hist.SetBinError  (b, new_e)
+
 
 def get_cumulative_histogram(hist, inverse_x=False, inverse_y=False):
 
@@ -390,6 +438,8 @@ def set_default_style():
     ROOT.gStyle.SetEndErrorSize(0)
 
 def set_atlas_style():
+
+    set_palette()
 
     # use plain black on white colors
     icol = 0

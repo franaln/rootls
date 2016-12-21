@@ -59,8 +59,10 @@ def main():
     objects = []
     for path in args.objpath:
 
-        file_path, root_path = path.split('/', 1)
-        print(file_path, root_path)
+        file_path, root_path = path.split('.root')
+
+        file_path += '.root'
+
         # check root file
         if not os.path.isfile(file_path):
             print('%s is not a file' % file_path)
