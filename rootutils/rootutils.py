@@ -18,6 +18,30 @@ class Value(object):
             return '{:.4f} +- {:.4f}'.format(self.mean, self.error)
         else:
             return '{:.2f} +- {:.2f}'.format(self.mean, self.error)
+        
+    def __gt__(self, other):
+        try:
+            return self.mean > other.mean
+        except:
+            return self.mean > other
+
+    def __lt__(self, other):
+        try:
+            return self.mean < other.mean
+        except:
+            return self.mean < other
+
+    def __ge__(self, other):
+        try:
+            return self.mean > other.mean
+        except:
+            return self.mean > other
+
+    def __le__(self, other):
+        try:
+            return self.mean < other.mean
+        except:
+            return self.mean < other
 
     def __add__(self, other):
         mean = self.mean + other.mean
