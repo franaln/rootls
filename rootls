@@ -32,23 +32,62 @@ def str_to_num(s):
 #------------
 def print_hist_all(hist):
 
-    labels = []
-    values = []
-    for b in range(hist.GetNbinsX()):
-        label = hist.GetXaxis().GetBinLabel(b+1)
-        if not label:
-            #label = 'bin %.2i' % (b+1)
-            label = '[%.2f, %.2f]' % (hist.GetXaxis().GetBinLowEdge(b+1), hist.GetXaxis().GetBinUpEdge(b+1))
+    if hist.InheritsFrom('TH2'):
 
-        labels.append(label)
-        values.append((hist.GetBinContent(b+1), hist.GetBinError(b+1)))
+        # labels
+        labels_x = []
+        labels_y = []
+        for bx in range(1, hist.GetNbinsX()+1):
+            label = hist.GetXaxis().GetBinLabel(bx)
+            if not label:
+                label = '[%.2f, %.2f]' % (hist.GetXaxis().GetBinLowEdge(bx), hist.GetXaxis().GetBinUpEdge(bx))
 
-    max_len = max([len(label) for label in labels]) + 1
-    for label, (val, err) in zip(labels, values):
-        print('%s%s: %.2f +- %.2f' % (label, ' '*(max_len-len(label)), val, err))
+            labels_x.append(label)
+
+        for by in range(1, hist.GetNbinsY()+1):
+            label = hist.GetYaxis().GetBinLabel(by)
+            if not label:
+                label = '[%.2f, %.2f]' % (hist.GetYaxis().GetBinLowEdge(by), hist.GetYaxis().GetBinUpEdge(by))
+
+            labels_y.append(label)
+
+        # values
+        values = []
+        for by in range(1, hist.GetNbinsY()+1):
+            values_x = []
+            for bx in range(1, hist.GetNbinsX()+1):
+                values_x.append((hist.GetBinContent(bx, by), hist.GetBinError(bx, by)))
+
+            values.append(values_x)
+
+        max_len = max([len(label) for label in labels_y]) + 1
+        print('%s%s' % (' '*max_len, ' '.join([label for label in labels_x])))
+        for label, values_x in zip(labels_y, values):
+            print('%s%s: %s' % (label, ' '*(max_len-len(label)), '    '.join([ '%.2f +- %.2f' % (val, err) for (val, err) in values_x])))
+
+
+    else:
+        labels = []
+        values = []
+        for b in range(hist.GetNbinsX()):
+            label = hist.GetXaxis().GetBinLabel(b+1)
+            if not label:
+                label = '[%.2f, %.2f]' % (hist.GetXaxis().GetBinLowEdge(b+1), hist.GetXaxis().GetBinUpEdge(b+1))
+
+            labels.append(label)
+            values.append((hist.GetBinContent(b+1), hist.GetBinError(b+1)))
+
+        max_len = max([len(label) for label in labels]) + 1
+        for label, (val, err) in zip(labels, values):
+            if val < 0.01:
+                print('%s%s: %.4f +- %.4f' % (label, ' '*(max_len-len(label)), val, err))
+            else:
+                print('%s%s: %.2f +- %.2f' % (label, ' '*(max_len-len(label)), val, err))
 
 
 def print_hist(hist, args):
+
+    # FIX: update for TH2 support
 
     if args.getbin is not None:
 
@@ -206,8 +245,6 @@ def main():
                     hist.Add(h, 1.0)
 
                 print_hist(hist, args)
-
-
 
 
         return
