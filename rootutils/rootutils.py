@@ -18,7 +18,7 @@ class Value(object):
             return '{:.4f} +- {:.4f}'.format(self.mean, self.error)
         else:
             return '{:.2f} +- {:.2f}'.format(self.mean, self.error)
-        
+
     def __gt__(self, other):
         try:
             return self.mean > other.mean
@@ -308,6 +308,14 @@ def get_cumulative_histogram(hist, inverse_x=False, inverse_y=False):
 
     return newhist
 
+
+def merge_histograms(merge_name, merge_list):
+
+    new_hist = merge_list[0].Clone(merge_name)
+    for h in merge_list[1:]:
+        new_hist.Add(h, 1)
+
+    return new_hist
 
 # Histogram Manager
 class HistManager:
