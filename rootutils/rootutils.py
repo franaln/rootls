@@ -45,16 +45,15 @@ class Value(object):
 
     def __add__(self, other):
         mean = self.mean + other.mean
-        error = self.error + other.error
+        error = math.sqrt(self.error**2 + other.error**2)
         return Value(mean, error)
 
     def __sub__(self, other):
         mean = self.mean - other.mean
-        error = self.error + other.error
+        error = math.sqrt(self.error**2 + other.error**2)
         return Value(mean, error)
 
     def __mul__(self, other):
-
         try:
             mean = self.mean * other.mean
             try:
@@ -216,30 +215,56 @@ def histogram_add_overflow_bin(hist):
         over_bin_x = last_bin_x + 1
         over_bin_y = last_bin_y + 1
 
-        for bx in xrange(hist.GetNbinsX()):
+        for bx in xrange(1, last_bin_x):
 
-            new_val = hist.GetBinContent(bx+1, last_bin_y) + hist.GetBinContent(bx+1, over_bin_y)
-            hist.SetBinContent(bx+1, last_bin_y, new_val)
-            hist.SetBinContent(bx+1, over_bin_y, 0.0)
+            new_val = hist.GetBinContent(bx, last_bin_y) + hist.GetBinContent(bx, over_bin_y)
 
-            e1 = hist.GetBinError(bx+1, last_bin_y)
-            e2 = hist.GetBinError(bx+1, over_bin_y)
+            hist.SetBinContent(bx, last_bin_y, new_val)
+            hist.SetBinContent(bx, over_bin_y, 0.0)
+
+            e1 = hist.GetBinError(bx, last_bin_y)
+            e2 = hist.GetBinError(bx, over_bin_y)
             new_err = math.sqrt(e1*e1 + e2*e2)
-            hist.SetBinError(bx+1, last_bin_y, new_err)
-            hist.SetBinError(bx+1, over_bin_y, 0.0)
+            hist.SetBinError(bx, last_bin_y, new_err)
+            hist.SetBinError(bx, over_bin_y, 0.0)
 
-        for by in xrange(hist.GetNbinsY()):
+        for by in xrange(1, last_bin_y):
 
-            new_val = hist.GetBinContent(last_bin_x, by+1) + hist.GetBinContent(over_bin_x, by+1)
-            hist.SetBinContent(last_bin_x, by+1, new_val)
-            hist.SetBinContent(over_bin_x, by+1, 0.0)
+            new_val = hist.GetBinContent(last_bin_x, by) + hist.GetBinContent(over_bin_x, by)
+            hist.SetBinContent(last_bin_x, by, new_val)
+            hist.SetBinContent(over_bin_x, by, 0.0)
             
-            e1 = hist.GetBinError(last_bin_x, bx+1)
-            e2 = hist.GetBinError(over_bin_x, bx+1)
+            e1 = hist.GetBinError(last_bin_x, by)
+            e2 = hist.GetBinError(over_bin_x, by)
             new_err = math.sqrt(e1*e1 + e2*e2)
-            hist.SetBinError(last_bin_x, by+1, new_err)
-            hist.SetBinError(over_bin_x, by+1, 0.0)
+            hist.SetBinError(last_bin_x, by, new_err)
+            hist.SetBinError(over_bin_x, by, 0.0)
             
+
+        # last x/y bin
+        new_val = hist.GetBinContent(last_bin_x, last_bin_y) + \
+                  hist.GetBinContent(over_bin_x, last_bin_y) + \
+                  hist.GetBinContent(last_bin_x, over_bin_y) + \
+                  hist.GetBinContent(over_bin_x, over_bin_y)
+
+        hist.SetBinContent(last_bin_x, last_bin_y, new_val)
+        hist.SetBinContent(last_bin_x, over_bin_y, 0.)
+        hist.SetBinContent(over_bin_x, last_bin_y, 0.)
+        hist.SetBinContent(over_bin_x, over_bin_y, 0.)
+
+        e1 = hist.GetBinError(last_bin_x, last_bin_y)
+        e2 = hist.GetBinError(over_bin_x, last_bin_y)
+        e3 = hist.GetBinError(last_bin_x, over_bin_y)
+        e4 = hist.GetBinError(over_bin_x, over_bin_y)
+
+        new_err = math.sqrt(e1*e1+e2*e2+e3*e3+e4*e4)
+        hist.SetBinError(last_bin_x, last_bin_y, new_err)
+        hist.SetBinError(last_bin_x, over_bin_y, 0.)
+        hist.SetBinError(over_bin_x, last_bin_y, 0.)
+        hist.SetBinError(over_bin_x, over_bin_y, 0.)
+        
+
+
     # 1D histogram
     else:
         last_bin = hist.GetNbinsX()
