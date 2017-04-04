@@ -207,55 +207,58 @@ def histogram_add_overflow_bin(hist):
     """ add the overflow bin  content to
     the last bin """
 
-    last_bin = hist.GetNbinsX()
-    over_bin = last_bin + 1
+    # 2D histograms
+    if hist.InheritsFrom('TH2'):
 
-    # value
-    new_val = hist.GetBinContent(last_bin) + hist.GetBinContent(over_bin)
-    hist.SetBinContent(last_bin, new_val)
-    hist.SetBinContent(over_bin, 0.0)
+        last_bin_x = hist.GetNbinsX()
+        last_bin_y = hist.GetNbinsY()
 
-    # error
-    e1 = hist.GetBinError(last_bin)
-    e2 = hist.GetBinError(over_bin)
-    new_err = math.sqrt(e1*e1 + e2*e2)
-    hist.SetBinError(last_bin, new_err)
-    hist.SetBinError(over_bin, 0.0)
+        over_bin_x = last_bin_x + 1
+        over_bin_y = last_bin_y + 1
 
-def histogram2d_add_overflow_bin(hist):
-    """ add the overflow bin  content to
-    the last bin """
+        for bx in xrange(hist.GetNbinsX()):
 
-    last_bin_x = hist.GetNbinsX()
-    last_bin_y = hist.GetNbinsY()
+            new_val = hist.GetBinContent(bx+1, last_bin_y) + hist.GetBinContent(bx+1, over_bin_y)
+            hist.SetBinContent(bx+1, last_bin_y, new_val)
+            hist.SetBinContent(bx+1, over_bin_y, 0.0)
 
-    over_bin_x = last_bin_x + 1
-    over_bin_y = last_bin_y + 1
+            e1 = hist.GetBinError(bx+1, last_bin_y)
+            e2 = hist.GetBinError(bx+1, over_bin_y)
+            new_err = math.sqrt(e1*e1 + e2*e2)
+            hist.SetBinError(bx+1, last_bin_y, new_err)
+            hist.SetBinError(bx+1, over_bin_y, 0.0)
 
-    for bx in xrange(hist.GetNbinsX()):
+        for by in xrange(hist.GetNbinsY()):
 
-        new_val = hist.GetBinContent(bx+1, last_bin_y) + hist.GetBinContent(bx+1, over_bin_y)
-        hist.SetBinContent(bx+1, last_bin_y, new_val)
-        hist.SetBinContent(bx+1, over_bin_y, 0.0)
+            new_val = hist.GetBinContent(last_bin_x, by+1) + hist.GetBinContent(over_bin_x, by+1)
+            hist.SetBinContent(last_bin_x, by+1, new_val)
+            hist.SetBinContent(over_bin_x, by+1, 0.0)
+            
+            e1 = hist.GetBinError(last_bin_x, bx+1)
+            e2 = hist.GetBinError(over_bin_x, bx+1)
+            new_err = math.sqrt(e1*e1 + e2*e2)
+            hist.SetBinError(last_bin_x, by+1, new_err)
+            hist.SetBinError(over_bin_x, by+1, 0.0)
+            
+    # 1D histogram
+    else:
+        last_bin = hist.GetNbinsX()
+        over_bin = last_bin + 1
 
-        e1 = hist.GetBinError(bx+1, last_bin_y)
-        e2 = hist.GetBinError(bx+1, over_bin_y)
+        # value
+        new_val = hist.GetBinContent(last_bin) + hist.GetBinContent(over_bin)
+        hist.SetBinContent(last_bin, new_val)
+        hist.SetBinContent(over_bin, 0.0)
+        
+        # error
+        e1 = hist.GetBinError(last_bin)
+        e2 = hist.GetBinError(over_bin)
         new_err = math.sqrt(e1*e1 + e2*e2)
-        hist.SetBinError(bx+1, last_bin_y, new_err)
-        hist.SetBinError(bx+1, over_bin_y, 0.0)
+        hist.SetBinError(last_bin, new_err)
+        hist.SetBinError(over_bin, 0.0)
 
-    for by in xrange(hist.GetNbinsY()):
 
-        new_val = hist.GetBinContent(last_bin_x, by+1) + hist.GetBinContent(over_bin_x, by+1)
-        hist.SetBinContent(last_bin_x, by+1, new_val)
-        hist.SetBinContent(over_bin_x, by+1, 0.0)
-
-        e1 = hist.GetBinError(last_bin_x, bx+1)
-        e2 = hist.GetBinError(over_bin_x, bx+1)
-        new_err = math.sqrt(e1*e1 + e2*e2)
-        hist.SetBinError(last_bin_x, by+1, new_err)
-        hist.SetBinError(over_bin_x, by+1, 0.0)
-
+ROOT.TH1.AddOverflowBin = histogram_add_overflow_bin
 
 def histogram_scale(hist, c, e_c=None):
     """ Scale histogram by a factor with error (c +- e_c)
