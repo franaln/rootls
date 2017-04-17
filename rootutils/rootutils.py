@@ -1,9 +1,15 @@
 # (py)root utils
 
 import os
+import sys
 import ROOT
 import math
 from array import array
+
+is_py3 = (sys.version_info > (3, 0))
+
+if not is_py3:
+    range = xrange
 
 #-----------
 # Utils
@@ -215,7 +221,7 @@ def histogram_add_overflow_bin(hist):
         over_bin_x = last_bin_x + 1
         over_bin_y = last_bin_y + 1
 
-        for bx in xrange(1, last_bin_x):
+        for bx in range(1, last_bin_x):
 
             new_val = hist.GetBinContent(bx, last_bin_y) + hist.GetBinContent(bx, over_bin_y)
 
@@ -228,18 +234,18 @@ def histogram_add_overflow_bin(hist):
             hist.SetBinError(bx, last_bin_y, new_err)
             hist.SetBinError(bx, over_bin_y, 0.0)
 
-        for by in xrange(1, last_bin_y):
+        for by in range(1, last_bin_y):
 
             new_val = hist.GetBinContent(last_bin_x, by) + hist.GetBinContent(over_bin_x, by)
             hist.SetBinContent(last_bin_x, by, new_val)
             hist.SetBinContent(over_bin_x, by, 0.0)
-            
+
             e1 = hist.GetBinError(last_bin_x, by)
             e2 = hist.GetBinError(over_bin_x, by)
             new_err = math.sqrt(e1*e1 + e2*e2)
             hist.SetBinError(last_bin_x, by, new_err)
             hist.SetBinError(over_bin_x, by, 0.0)
-            
+
 
         # last x/y bin
         new_val = hist.GetBinContent(last_bin_x, last_bin_y) + \
@@ -262,7 +268,7 @@ def histogram_add_overflow_bin(hist):
         hist.SetBinError(last_bin_x, over_bin_y, 0.)
         hist.SetBinError(over_bin_x, last_bin_y, 0.)
         hist.SetBinError(over_bin_x, over_bin_y, 0.)
-        
+
 
 
     # 1D histogram
@@ -274,7 +280,7 @@ def histogram_add_overflow_bin(hist):
         new_val = hist.GetBinContent(last_bin) + hist.GetBinContent(over_bin)
         hist.SetBinContent(last_bin, new_val)
         hist.SetBinContent(over_bin, 0.0)
-        
+
         # error
         e1 = hist.GetBinError(last_bin)
         e2 = hist.GetBinError(over_bin)
@@ -300,7 +306,7 @@ def histogram_scale(hist, c, e_c=None):
     if e_c is None:
         hist.Scale(c)
         return
-    for b in xrange(1, hist.GetNbinsX()+1):
+    for b in range(1, hist.GetNbinsX()+1):
         n_b = hist.GetBinContent(b)
         e_b = hist.GetBinError(b)
 
@@ -410,7 +416,7 @@ def sort_graph(g, sort_x=True):
     ay = array('f', [])
 
     d = dict()
-    for i in xrange(g.GetN()):
+    for i in range(g.GetN()):
 
         xtmp = ROOT.Double(0)
         ytmp = ROOT.Double(0)
@@ -419,7 +425,7 @@ def sort_graph(g, sort_x=True):
         d[xtmp] = ytmp
 
     if sort_x:
-        for x, y in sorted(d.iteritems()):
+        for x, y in sorted(d.items()):
             ax.append(x)
             ay.append(y)
     else:
@@ -585,6 +591,14 @@ def set_style(obj, **kwargs):
 
     alpha = kwargs.get('alpha', None)
 
+    xtitle = kwargs.get('xtitle', None)
+    ytitle = kwargs.get('ytitle', None)
+
+    xmin = kwargs.get('xmin', None)
+    xmax = kwargs.get('xmax', None)
+    ymin = kwargs.get('ymin', None)
+    ymax = kwargs.get('ymax', None)
+
     # default
     obj.SetTitle('')
     if is_hist:
@@ -605,6 +619,18 @@ def set_style(obj, **kwargs):
     # fill
     if fill_style is not None:
         obj.SetFillStyle(fill_style)
+
+    # axis titles
+    if xtitle is not None:
+        obj.GetXaxis().SetTitle(xtitle)
+    if ytitle is not None:
+        obj.GetYaxis().SetTitle(ytitle)
+
+    if xmin is not None and xmax is not None:
+        obj.GetXaxis().SetRangeUser(xmin, xmax)
+    if ymin is not None and ymax is not None:
+        obj.GetYaxis().SetRangeUser(ymin, ymax)
+
 
 
 def canvas(name='', title='', xsize=600, ysize=600):

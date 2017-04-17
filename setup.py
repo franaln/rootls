@@ -5,7 +5,7 @@ except ImportError:
 
 setup(
     name='rootutils',
-    version='0.1',
+    version='0.2.1',
     description='',
     url='https://github.com/franaln/rootutils',
     author='Francisco Alonso',

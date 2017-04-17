@@ -121,7 +121,7 @@ def test():
 
     t2 = LatexTable(['Hola', 'Chau'])
     t2.add_row(['1', '2'])
-    print t2
+    print(t2)
 
 
 if __name__ == '__main__':
