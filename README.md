@@ -12,3 +12,7 @@ or
     python setup.py install --user
 
 ## Usage
+
+    rootls file.root [obj]
+
+    

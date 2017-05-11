@@ -1,3 +1,4 @@
+from glob import glob
 try:
     from setuptools import setup
 except ImportError:
@@ -12,6 +13,6 @@ setup(
     author_email='franaln@gmail.com',
     license='',
     packages=['rootutils',],
-    scripts=['rootls', 'rootdiff', 'rootplot', 'plothists'],
+    scripts=glob('scripts/*'),
     zip_safe=False,
 )

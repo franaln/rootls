@@ -478,16 +478,16 @@ def get_color(c):
 
     return colour
 
-def set_palette():
-    s = array('d', [0.00, 0.34, 0.61, 0.84, 1.00])
-    r = array('d', [0.00, 0.00, 0.87, 1.00, 0.51])
-    g = array('d', [0.00, 0.81, 1.00, 0.20, 0.00])
-    b = array('d', [0.51, 1.00, 0.12, 0.00, 0.00])
-    ROOT.TColor.CreateGradientColorTable(len(s), s, r, g, b, 999)
-    ROOT.gStyle.SetNumberContours(999)
+# def set_palette():
+#     s = array('d', [0.00, 0.34, 0.61, 0.84, 1.00])
+#     r = array('d', [0.00, 0.00, 0.87, 1.00, 0.51])
+#     g = array('d', [0.00, 0.81, 1.00, 0.20, 0.00])
+#     b = array('d', [0.51, 1.00, 0.12, 0.00, 0.00])
+#     ROOT.TColor.CreateGradientColorTable(len(s), s, r, g, b, 999)
+#     ROOT.gStyle.SetNumberContours(999)
 
 def set_default_style():
-    set_palette()
+
     ROOT.gStyle.SetPadTickX(1)
     ROOT.gStyle.SetPadTickY(1)
     ROOT.gStyle.SetFrameFillColor(0)
@@ -502,10 +502,11 @@ def set_default_style():
     ROOT.gStyle.SetLabelFont(132, "XYZ")
     ROOT.gStyle.SetTitleFont(132, "XYZ")
     ROOT.gStyle.SetEndErrorSize(0)
+    ROOT.gStyle.SetPalette(71)
 
 def set_atlas_style():
 
-    set_palette()
+    ROOT.gStyle.SetPalette(71)
 
     # use plain black on white colors
     icol = 0
@@ -535,7 +536,7 @@ def set_atlas_style():
     tsize = 0.05
     ROOT.gStyle.SetTextFont(font)
     ROOT.gStyle.SetTextSize(tsize)
-    #ROOT.gStyle.SetLegendTextFont(font)
+
     ROOT.gStyle.SetLabelFont(font, "x")
     ROOT.gStyle.SetTitleFont(font, "x")
     ROOT.gStyle.SetLabelFont(font, "y")
@@ -579,17 +580,17 @@ def set_style(obj, **kwargs):
     # check if hist or graph
     is_hist = obj.InheritsFrom('TH1')
 
-    color = kwargs.get('color', 'kBlack')
-    fill = kwargs.get('fill', False)
-
-    marker_style = kwargs.get('mstyle', 20)
-    fill_style = kwargs.get('fstyle', None)
-    line_style = kwargs.get('lstyle',None)
-
-    marker_size = kwargs.get('msize', 0.8)
-    line_width = kwargs.get('lwidth', 2)
-
+    color = kwargs.get('color', ROOT.kBlack)
     alpha = kwargs.get('alpha', None)
+
+    mstyle = kwargs.get('mstyle', 20)
+    fstyle = kwargs.get('fstyle', None)
+    lstyle = kwargs.get('lstyle',None)
+
+    msize  = kwargs.get('msize', 0.8)
+    lwidth = kwargs.get('lwidth', 2)
+
+    fill = (kwargs.get('fill', False) or fstyle is not None)
 
     xtitle = kwargs.get('xtitle', None)
     ytitle = kwargs.get('ytitle', None)
@@ -608,17 +609,17 @@ def set_style(obj, **kwargs):
     set_color(obj, color, fill, alpha)
 
     # marker
-    obj.SetMarkerStyle(marker_style)
-    obj.SetMarkerSize(marker_size)
+    obj.SetMarkerStyle(mstyle)
+    obj.SetMarkerSize(msize)
 
     # line
-    obj.SetLineWidth(line_width)
-    if line_style is not None:
-        obj.SetLineStyle(line_style)
+    obj.SetLineWidth(lwidth)
+    if lstyle is not None:
+        obj.SetLineStyle(lstyle)
 
     # fill
-    if fill_style is not None:
-        obj.SetFillStyle(fill_style)
+    if fstyle is not None:
+        obj.SetFillStyle(fstyle)
 
     # axis titles
     if xtitle is not None:
