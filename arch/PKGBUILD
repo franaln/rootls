@@ -1,0 +1,21 @@
+pkgname=rootutils
+pkgver=20170511
+pkgrel=1
+pkgdesc='root utils'
+arch=('any')
+url='https://github.com/franaln/rootutils'
+license=('')
+depends=('python' 'root')
+makedepends=('git' 'python' 'root')
+provides=('rootutils')
+source=("$pkgname"::'git://github.com/franaln/rootutils.git')
+sha256sums=('SKIP')
+
+pkgver() {
+    date +%Y%m%d
+}
+
+package() {
+    cd "${srcdir}/${pkgname}"
+    python setup.py -q install --root="$pkgdir" --optimize=1
+}
