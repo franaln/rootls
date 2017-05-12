@@ -4,12 +4,16 @@ import shutil
 
 class LatexTable(object):
 
-    def __init__(self, field_names=None, env=False):
+    def __init__(self, field_names=None, align=None, env=False):
         self._field_names = []
         self._align = {}
         self._rows = []
         if field_names:
             self._field_names = field_names
+            if align and len(align) == len(field_names):
+                for name, l in zip(field_names, align):
+                    self._align[name] = l
+
         if env and env in (True, False):
             self._add_environment = True
         else:
@@ -39,7 +43,7 @@ class LatexTable(object):
             raise Exception("Column length %d does not match number of rows %d!" % (len(column), len(self._rows)))
 
     def add_line(self):
-        self._rows.append([r'\hline',])
+        self._rows.append(None)
 
     def clear(self):
         self._rows = []
@@ -65,14 +69,29 @@ class LatexTable(object):
 
         # add rows
         for row in self._rows:
-            row = [str(i) for i in row]
-            lines.append(' & '.join(row) + r' \\')
+            if row is None:
+                lines.append('\hline')
+
+            else:
+                row_tmp = []
+                for col in row:  
+                    try:
+                        col = '$%s \pm %s$' % (col.mean, col.error)
+                    except:
+                        if '+-' in col:
+                            val, err = col.split('+-')
+                            col = '$%s \pm %s$' % (val, err)
+                        else:
+                            col = str(col)
+                    row_tmp.append(col)
+
+                lines.append(' & '.join(row_tmp) + r' \\')
 
         # add end environment
         if self._add_environment:
             lines.append(r'\end{tabular}')
 
-        return '\n'.join(lines)
+        return '\n'.join(lines) + '\n'
 
     def save_tex(self, name='table'):
         fname = name if name.endswith('.tex') else '%s.tex' % name
@@ -121,7 +140,7 @@ def test():
 
     t2 = LatexTable(['Hola', 'Chau'])
     t2.add_row(['1', '2'])
-    print(t2)
+    print t2
 
 
 if __name__ == '__main__':

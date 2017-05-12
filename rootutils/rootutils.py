@@ -11,9 +11,28 @@ is_py3 = (sys.version_info > (3, 0))
 if not is_py3:
     range = xrange
 
+
 #-----------
 # Utils
 #-----------
+
+# Files, directories
+def mkdirp(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc: # Python >2.5
+        if os.path.isdir(path):
+            pass
+        else:
+            raise
+
+def rmdir(path):
+    import shutil
+    try:
+        shutil.rmtree(path)
+    except OSError as exc:
+        pass
+
 class Value(object):
     def __init__(self, mean=0.0, error=0.0):
         self.mean = mean
@@ -85,7 +104,7 @@ class Value(object):
         return Value(mean, error)
 
 #-----------
-# Root file
+# Root file (remove?)
 #-----------
 class RootFile(ROOT.TFile):
     def __init__(self, path, mode='read'):
@@ -154,7 +173,7 @@ class RootFile(ROOT.TFile):
 
 
 #-----------
-# Histograms
+# Histograms (CLEAN)
 #-----------
 def histogram(name, nx=None, xmin=None, xmax=None, xbins=None):
 
@@ -359,6 +378,11 @@ class HistManager:
         if path is not None:
             self.load(path)
 
+        self.weight = 1.0
+
+    def set_weight(self, w):
+        self.weight = w
+
     def add(self, name, xbins, xmin, xmax):
         self.data[name] = ROOT.TH1F(name, name, xbins, xmin, xmax)
         self.data[name].Sumw2()
@@ -372,30 +396,35 @@ class HistManager:
         self.data[name].Sumw2()
 
     def fill(self, name, value, weight=None):
-        if weight is None:
-            self.data[name].Fill(value)
-        else:
+        if weight is not None:
             self.data[name].Fill(value, weight)
+        else:
+            self.data[name].Fill(value, self.weight)
 
     def fill_2d(self, name, value_x, value_y, weight=None):
-        if weight is None:
-            self.data[name].Fill(value_x, value_y)
-        else:
+        if weight is not None:
             self.data[name].Fill(value_x, value_y, weight)
+        else:
+            self.data[name].Fill(value_x, value_y, self.weight)
 
     def fill_profile(self, name, value_x, value_y, weight):
-        self.data[name].Fill(value_x, value_y, weight)
+        if weight is not None:
+            self.data[name].Fill(value_x, value_y, weight)
+        else:
+            self.data[name].Fill(value_x, value_y, self.weight)
+
 
     def save(self, path):
-        with RootFile(path, 'recreate') as f:
-            for name, hist in sorted(self.data.iteritems()):
-                f.write(hist, name)
+        f = ROOT.TFile(path, 'recreate')
+        f.cd()
+        for name, hist in sorted(self.data.iteritems()):
+            hist.Write(name)
 
     def load(self, path):
-        with RootFile(path, 'read') as f:
-            for key in f.GetListOfKeys():
-                name = key.GetName()
-                self.data[name] = f.get(name)
+        f = ROOT.TFile.Open(path)
+        for key in f.GetListOfKeys():
+            name = key.GetName()
+            self.data[name] = f.Get(name)
 
     def __getitem__(self, key):
         return self.data[key]
@@ -405,7 +434,6 @@ class HistManager:
 
     def __iter__(self):
         return self.data.iteritems()
-
 
 #--------
 # Graphs
@@ -633,7 +661,6 @@ def set_style(obj, **kwargs):
         obj.GetYaxis().SetRangeUser(ymin, ymax)
 
 
-
 def canvas(name='', title='', xsize=600, ysize=600):
     if not title:
         title = name
@@ -683,7 +710,7 @@ def draw_latex(x, y, text, size=None, ndc=False):
 
     l.Draw()
 
-def draw_horizontal_line(y):
+def draw_horizontal_line(y): # FIX
 
     l = ROOT.TLine(0, 220, 200, 220)
     l.SetLineStyle(2)
@@ -729,3 +756,315 @@ def get_histogram(filename, treename, variable, selection='', xmin=None, xmax=No
         hist = ROOT.gDirectory.Get('htemp')
 
     return hist.Clone()
+
+
+#-------
+# Stats
+#-------
+
+def get_significance(s, b, sb, minb=None, mins=None):
+
+    sig = ROOT.RooStats.NumberCountingUtils.BinomialExpZ(s, b, sb)
+
+    if minb is not None and b < minb:
+        sig = 0.
+    if mins is not None and s < mins:
+        sig = 0.
+    if sig < 0.:
+        sig = 0.
+
+    if sig == float('Inf'):
+        sig = 0.
+
+    return sig
+
+def get_significance_unc(s, b, sb=0.5, minb=None, mins=None):
+
+    """ ***OLD***
+    Get significance taking into account
+    the background systematic uncertainty
+    (from Cowan formula) """
+
+    try:
+        s = s.mean
+        b = b.mean
+    except:
+        pass
+
+    s, b = float(s), float(b)
+
+    if s < 0.00001 or b < 0.00001:
+        return 0.00
+
+    if mins is not None and s < mins:
+        return 0.00
+    if minb is not None and b < minb:
+        return 0.00
+
+    sb = sb * b # as default we use 50% of uncertainty for the background
+
+    za2_p = (s + b) * ROOT.TMath.Log( ((s + b) * (b + sb**2)) / (b**2 + (s + b) * sb**2) )
+    za2_m = (b**2/sb**2) * ROOT.TMath.Log( 1 + (s * sb**2)/(b * (b + sb**2)) )
+
+    za2 = 2 * (za2_p - za2_m)
+
+    if za2 <= 0.:
+        return 0
+
+    za = ROOT.TMath.Sqrt(za2)
+
+    if za > 0.0:
+        za = round(za, 2)
+    else:
+        za = 0.00
+
+    return za
+
+
+def get_sb(s, b):
+    if b > 0:
+        return s/ROOT.TMath.Sqrt(b)
+    else:
+        return 0
+
+
+def pvalue(obs, exp):
+    if obs > exp:
+        return 1 - ROOT.Math.inc_gamma_c(obs, exp)
+    else:
+        return ROOT.Math.inc_gamma_c(obs+1, exp)
+
+
+def zvalue(pvalue):
+    return ROOT.TMath.Sqrt(2) * ROOT.TMath.ErfInverse(1. - 0.2*pvalue)
+
+
+def poisson_significance(obs, exp):
+
+    p = pvalue(obs, exp)
+
+    if p < 0.5:
+        if obs > exp:
+            return zvalue(p)
+        else:
+            return -zvalue(p)
+
+    return 0.0
+
+
+def calc_poisson_cl_lower(q, obs):
+    """
+    Calculate lower confidence limit
+    e.g. to calculate the 68% lower limit for 2 observed events:
+    calcPoissonCLLower(0.68, 2.)
+    """
+    ll = 0.
+    if obs >= 0.:
+        a = (1. - q) / 2. # = 0.025 for 95% confidence interval
+        ll = ROOT.TMath.ChisquareQuantile(a, 2.*obs) / 2.
+
+    return ll
+
+def calc_poisson_cl_upper(q, obs):
+    """
+    Calculate upper confidence limit
+    e.g. to calculate the 68% upper limit for 2 observed events:
+    calcPoissonCLUpper(0.68, 2.)
+    """
+    ul = 0.
+    if obs >= 0. :
+        a = 1. - (1. - q) / 2. # = 0.025 for 95% confidence interval
+        ul = ROOT.TMath.ChisquareQuantile(a, 2.* (obs + 1.)) / 2.
+
+    return ul
+
+def make_poisson_cl_errors(hist):
+    """
+    Make a TGraph from a TH1 with the poisson errors
+    """
+
+    x_val  = array('f')
+    y_val  = array('f')
+    x_errU = array('f')
+    x_errL = array('f')
+    y_errU = array('f')
+    y_errL = array('f')
+
+    for b in xrange(1, hist.GetNbinsX()+1):
+        binEntries = hist.GetBinContent(b)
+        if binEntries > 0.:
+            binErrUp   = calc_poisson_cl_upper(0.68, binEntries) - binEntries
+            binErrLow  = binEntries - calc_poisson_cl_lower(0.68, binEntries)
+            x_val.append(hist.GetXaxis().GetBinCenter(b))
+            y_val.append(binEntries)
+            y_errU.append(binErrUp)
+            y_errL.append(binErrLow)
+            x_errU.append(hist.GetXaxis().GetBinWidth(b)/2.)
+            x_errL.append(hist.GetXaxis().GetBinWidth(b)/2.)
+
+    if len(x_val) > 0:
+        data_graph = ROOT.TGraphAsymmErrors(len(x_val), x_val, y_val, x_errL, x_errU, y_errL, y_errU)
+        return data_graph
+    else:
+        return ROOT.TGraph()
+
+
+
+
+#-------
+# Trees
+#-------
+
+multidraw_cxx = """
+
+// MultiDraw.cxx (code from pwaller)
+// Draws many histograms in one loop over a tree.
+// A little bit like a TTree::Draw which can make many histograms
+
+#include <TTree.h>
+#include <TH1D.h>
+#include <TTreeFormula.h>
+#include <TStopwatch.h>
+
+#include <iostream>
+
+// Get an Element from an array
+#define EL( type, array, index ) dynamic_cast<type *>( array->At( index ) )
+
+void MultiDraw(TTree *tree, TObjArray *formulae, TObjArray *weights, TObjArray *hists, UInt_t list_len)
+{
+  Long64_t i = 0;
+  Long64_t num_events = tree->GetEntries();
+
+  Double_t value = 0, weight = 0, common_weight = 0;
+  Int_t tree_number = -1;
+
+  for (i = 0; i<num_events; i++) {
+
+    // Display progress every 10000 events
+    if (i % 100000 == 0) {
+      std::cout.precision(2);
+      std::cout << "Done " << (double(i) / ( double(num_events)) * 100.0f) << "%   \r";
+      std::cout.flush();
+    }
+
+    if (tree_number != tree->GetTreeNumber()) {
+      tree_number = tree->GetTreeNumber();
+    }
+
+    tree->LoadTree(tree->GetEntryNumber(i));
+
+    for (UInt_t j=0; j<list_len; j++) {
+      // If the Value or the Weight is the same as the previous, then it can be re-used.
+      // In which case, this element fails to dynamic_cast to a formula, and evaluates to NULL
+      if ( EL(TTreeFormula, formulae, j) )
+        value = EL(TTreeFormula, formulae, j)->EvalInstance();
+
+      if ( EL(TTreeFormula, weights, j) )
+        weight = EL(TTreeFormula, weights, j)->EvalInstance();
+
+      if (weight)
+        EL(TH1D, hists, j)->Fill(value, weight);
+    }
+  }
+}
+"""
+
+
+def MakeTObjArray(the_list):
+    """
+    Turn a python iterable into a ROOT TObjArray
+    """
+
+    result = ROOT.TObjArray()
+    result.SetOwner()
+
+    # Make PyROOT give up ownership of the things that are being placed in the
+    # TObjArary. They get deleted because of result.SetOwner()
+    for item in the_list:
+        ROOT.SetOwnership(item, False)
+        result.Add(item)
+
+    return result
+
+
+def MultiDraw(self, *draw_list):
+    """
+    Draws (projects) many histograms in one loop over a tree.
+
+        Instead of:
+        tree.Project("hname1", "ph_pt",  "weightA")
+        tree.Project("hname2", "met_et", "weightB")
+
+        Do:
+        tree.MultiDraw( ("hname1", "ph_pt",  "weightA" ),
+                        ("hname2", "met_et", "weightB" ) )
+    """
+
+    hnames, variables, selections = [], [], []
+
+    last_variable, last_selection = None, None
+
+    histograms = []
+    for i, drawexp in enumerate(draw_list):
+
+        # Expand out origFormula and weight, otherwise just use weight of 1.
+        hname, variable, selection = drawexp
+
+        hist = ROOT.gDirectory.Get(hname)
+        if not hist:
+            raise RuntimeError("MultiDraw: Couldn't find histogram to fill '%s' in current directory." % name)
+
+        histograms.append(hist)
+
+        # The following two 'if' clauses check that the next formula is different
+        # to the previous one. If it is not, we add an ordinary TObject.
+        # Then, the dynamic cast in MultiDraw.cxx fails, giving 'NULL', and
+        # The previous value is used. This saves the recomputing of identical values
+        if variable != last_variable:
+            f = ROOT.TTreeFormula("variable%i" % i, variable, self)
+            if not f.GetTree():
+                raise RuntimeError("TTreeFormula didn't compile: %s" % variable)
+            f.SetQuickLoad(True)
+            variables.append(f)
+        else:
+            variables.append(ROOT.TObject())
+
+        if selection != last_selection:
+            f = ROOT.TTreeFormula("selection%i" % i, selection, self)
+            if not f.GetTree():
+                raise RuntimeError("TTreeFormula didn't compile: %s" % selection)
+            f.SetQuickLoad(True)
+            selections.append(f)
+        else:
+            selections.append(ROOT.TObject())
+
+        last_variable, last_selection = variable, selection
+
+
+    # Only compile MultiDraw once
+    try:
+        from ROOT import MultiDraw as _MultiDraw
+    except ImportError:
+        ROOT.gInterpreter.Declare(multidraw_cxx)
+        from ROOT import MultiDraw as _MultiDraw
+
+    # Ensure that formulae are told when tree changes
+    fManager = ROOT.TTreeFormulaManager()
+    for variable in variables + selections:
+        if type(variable) == ROOT.TTreeFormula:
+            fManager.Add(variable)
+
+    fManager.Sync()
+    self.SetNotify(fManager)
+
+    # Draw everything!
+    _MultiDraw(self,
+               MakeTObjArray(variables),
+               MakeTObjArray(selections),
+               MakeTObjArray(histograms),
+               len(variables))
+
+    return
+
+ROOT.TTree.MultiDraw = MultiDraw
