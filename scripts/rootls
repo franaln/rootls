@@ -160,6 +160,8 @@ def print_tree(tree, args):
 
 
 
+
+
 def main():
 
     parser = argparse.ArgumentParser(description='')
@@ -169,7 +171,6 @@ def main():
     parser.add_argument('rootpath', nargs='?')
 
     ## general options
-    parser.add_argument('--del', dest='delete', action='store_true', help='Caution! Delete all objects with this name. ')
     parser.add_argument('-t', '--type', action='store_true', help='Show object type')
 
     ## tree options
@@ -182,9 +183,16 @@ def main():
     parser.add_argument('-ce', '--count', action='store_true')
 
     ## histogram options
-    parser.add_argument('-gb', '--getbin', help='Show bin content for this bin')
+    parser.add_argument('-gbc', '--getbincontent', help='Show bin content for this bin')
 
     parser.add_argument('--format', help='')
+
+    ## edit options (onyl available if --edit)
+    parser.add_argument('--edit', action='store_true', help='Caution! you are modifying the file')
+    parser.add_argument('--delete', action='store_true', help='Caution! Delete all objects with this name. ')
+    parser.add_argument('--setbincontent', help='SetBinContent. Expect argument as "bin,content"')
+
+
 
     if len(sys.argv) < 2:
         parser.print_usage()
@@ -267,12 +275,15 @@ def main():
 
     keys = fin.GetListOfKeys()
 
+
+    # Show file content
     if root_path is None:
         for key in keys:
             if args.type:
                 print('%s [%s]' % (key.GetName(), key.GetClassName()))
             else:
                 print(key.GetName())
+
 
     else:
 
@@ -284,9 +295,27 @@ def main():
                 root_path = spath[1]
 
 
-        if args.delete:
+        if args.edit:
             fin.ReOpen('update')
-            fin.Delete(root_path+';*')
+
+            if args.delete:
+                fin.Delete(root_path+';*')
+
+            elif args.setbincontent is not None:
+
+                obj = fin.Get(root_path)
+
+                if not obj.InheritsFrom('TH1'):
+                    fin.Close()
+                    return 1
+
+                b, c = args.setbincontent.split(',')
+
+                bin_ = int(b)
+                content_ = float(c)
+
+                obj.SetBinContent(bin_, content_)
+                obj.Write()
 
         elif root_path in [ key.GetName() for key in keys ]:
 
