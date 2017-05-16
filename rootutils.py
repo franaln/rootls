@@ -758,29 +758,30 @@ def get_histogram(filename, treename, variable, selection='', xmin=None, xmax=No
     return hist.Clone()
 
 
-#-------
-# Stats
-#-------
+#-----------------------
+# Statistical functions
+#-----------------------
 
 def get_significance(s, b, sb, minb=None, mins=None):
 
-    sig = ROOT.RooStats.NumberCountingUtils.BinomialExpZ(s, b, sb)
+    z = ROOT.RooStats.NumberCountingUtils.BinomialExpZ(s, b, sb)
 
     if minb is not None and b < minb:
-        sig = 0.
+        z = 0.
     if mins is not None and s < mins:
-        sig = 0.
-    if sig < 0.:
-        sig = 0.
+        z = 0.
+    if z < 0.:
+        z = 0.
 
-    if sig == float('Inf'):
-        sig = 0.
+    if z == float('Inf'):
+        z = 0.
 
-    return sig
+    return z
 
 def get_significance_unc(s, b, sb=0.5, minb=None, mins=None):
 
-    """ ***OLD***
+    """
+    *** OLD -> use RooStats ***
     Get significance taking into account
     the background systematic uncertainty
     (from Cowan formula) """
@@ -852,29 +853,29 @@ def poisson_significance(obs, exp):
     return 0.0
 
 
-def calc_poisson_cl_lower(q, obs):
+def calc_poisson_cl_lower(q, n_obs):
     """
     Calculate lower confidence limit
     e.g. to calculate the 68% lower limit for 2 observed events:
-    calcPoissonCLLower(0.68, 2.)
+    calc_poisson_cl_lower(0.68, 2.)
     """
     ll = 0.
-    if obs >= 0.:
+    if n_obs >= 0.:
         a = (1. - q) / 2. # = 0.025 for 95% confidence interval
-        ll = ROOT.TMath.ChisquareQuantile(a, 2.*obs) / 2.
+        ll = ROOT.TMath.ChisquareQuantile(a, 2.* n_obs) / 2.
 
     return ll
 
-def calc_poisson_cl_upper(q, obs):
+def calc_poisson_cl_upper(q, n_obs):
     """
     Calculate upper confidence limit
     e.g. to calculate the 68% upper limit for 2 observed events:
-    calcPoissonCLUpper(0.68, 2.)
+    calc_poisson_cl_upper(0.68, 2.)
     """
     ul = 0.
-    if obs >= 0. :
+    if n_obs >= 0. :
         a = 1. - (1. - q) / 2. # = 0.025 for 95% confidence interval
-        ul = ROOT.TMath.ChisquareQuantile(a, 2.* (obs + 1.)) / 2.
+        ul = ROOT.TMath.ChisquareQuantile(a, 2.* (n_obs + 1.)) / 2.
 
     return ul
 
@@ -891,14 +892,14 @@ def make_poisson_cl_errors(hist):
     y_errL = array('f')
 
     for b in xrange(1, hist.GetNbinsX()+1):
-        binEntries = hist.GetBinContent(b)
-        if binEntries > 0.:
-            binErrUp   = calc_poisson_cl_upper(0.68, binEntries) - binEntries
-            binErrLow  = binEntries - calc_poisson_cl_lower(0.68, binEntries)
+        bin_content = hist.GetBinContent(b)
+        if bin_content > 0.:
+            bin_err_up  = calc_poisson_cl_upper(0.68, bin_content) - bin_content
+            bin_err_dn  = bin_content - calc_poisson_cl_lower(0.68, bin_content)
             x_val.append(hist.GetXaxis().GetBinCenter(b))
-            y_val.append(binEntries)
-            y_errU.append(binErrUp)
-            y_errL.append(binErrLow)
+            y_val.append(bin_content)
+            y_errU.append(bin_err_up)
+            y_errL.append(bin_err_dn)
             x_errU.append(hist.GetXaxis().GetBinWidth(b)/2.)
             x_errL.append(hist.GetXaxis().GetBinWidth(b)/2.)
 
