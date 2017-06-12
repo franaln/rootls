@@ -89,12 +89,12 @@ def print_hist(hist, args):
 
     # FIX: update for TH2 support
 
-    if args.getbin is not None:
+    if args.getbincontent is not None:
 
-        if args.getbin == 'last':
+        if args.getbincontent == 'last':
             bin_ = hist.GetNbinsX()
         else:
-            bin_ = int(args.getbin)
+            bin_ = int(args.getbincontent)
 
         if bin_ <= hist.GetNbinsX() and bin_ > 0:
             print(hist.GetBinContent(bin_))
@@ -334,7 +334,7 @@ def main():
             elif obj.InheritsFrom('TTree'):
                 print_tree(obj, args)
 
-            elif obj.InheritsFrom('RooWorkspace'):
+            else:
                 obj.Print()
 
 
