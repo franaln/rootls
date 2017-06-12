@@ -891,7 +891,7 @@ def make_poisson_cl_errors(hist):
     y_errU = array('f')
     y_errL = array('f')
 
-    for b in xrange(1, hist.GetNbinsX()+1):
+    for b in range(1, hist.GetNbinsX()+1):
         bin_content = hist.GetBinContent(b)
         if bin_content > 0.:
             bin_err_up  = calc_poisson_cl_upper(0.68, bin_content) - bin_content
