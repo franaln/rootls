@@ -20,6 +20,8 @@ def main():
     parser.add_argument('filepath1', nargs='?')
     parser.add_argument('filepath2', nargs='?')
 
+    parser.add_argument('-t', '--tree', help='Compare trees with this name')
+
     args = parser.parse_args()
 
     file_path_1, file_path_2 = args.filepath1, args.filepath2
@@ -67,19 +69,24 @@ def main():
     names2 = [ key.GetName() for key in keys2 ]
 
     if names1 != names2:
-        print('** Different key content!')
+        print('Different key content!')
 
-    if not ('mini' in names1 and 'mini' in names2):
+
+    if args.tree is None:
         return
 
-    tree1 = fin1.Get('mini')
-    tree2 = fin2.Get('mini')
+    if not (args.tree in names1 and args.tree in names2):
+        print('Tree %s not available in on of the input files' % args.tree)
+        return
 
-    branches1 = [branch.GetName() for branch in tree1.GetListOfLeaves()]
-    branches2 = [branch.GetName() for branch in tree2.GetListOfLeaves()]
+    tree1 = fin1.Get(args.tree)
+    tree2 = fin2.Get(args.tree)
+
+    branches1 = [ branch.GetName() for branch in tree1.GetListOfLeaves() ]
+    branches2 = [ branch.GetName() for branch in tree2.GetListOfLeaves() ]
 
     if tree1.GetEntries() != tree2.GetEntries():
-        print('** Different number of entries in mini ntuples')
+        print('Different number of entries in mini ntuples')
 
     for var in branches1:
 
