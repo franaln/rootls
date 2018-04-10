@@ -4,6 +4,7 @@
 from __future__ import print_function
 import os
 import sys
+import time
 import argparse
 
 try:
@@ -12,6 +13,159 @@ except ImportError:
     print('Error importing ROOT. Exiting...')
     sys.exit(1)
 
+C_1   = '\033[0;31m'
+C_2   = '\033[0;32m'
+C_R   = '\033[0m'
+
+# Print diffs
+def print_only_1(name):
+    print('%s< %s%s' % (C_1, name, C_R))
+
+def print_only_2(name):
+    print('%s> %s%s' % (C_2, name, C_R))
+
+def print_diff(name, n1, n2):
+    print('%s: %s%s%s   |   %s%s%s' % (name, C_1, n1, C_R, C_2, n2, C_R))
+
+
+# Comparisons
+def cmp_vals(f1, f2, tolerance=0.001):
+    return (abs(f1 - f2) < tolerance)
+
+
+def cmp_hists(h1, h2):
+
+    """
+    Compare entries/mean/RMS. TODO: Maybe use a Kolmogorov test
+    """
+
+    entries_1 = h1.GetEntries()
+    entries_2 = h2.GetEntries()
+
+    mean_1 = h1.GetMean()
+    mean_2 = h2.GetMean()
+
+    rms_1 = h1.GetRMS()
+    rms_2 = h2.GetRMS()
+
+    if not cmp_vals(entries_1, entries_2) or not cmp_vals(mean_1, mean_2) or not cmp_vals(rms_1, rms_2):
+        print_diff(
+            h1.GetName(),
+            'Entries = %i, Mean = %.2f, RMS = %.2f' % (entries_1, mean_1, rms_1),
+            'Entries = %i, Mean = %.2f, RMS = %.2f' % (entries_2, mean_2, rms_2)
+            )
+
+
+def cmp_trees(t1, t2):
+
+    branches1 = [branch.GetName() for branch in t1.GetListOfLeaves()]
+    branches2 = [branch.GetName() for branch in t2.GetListOfLeaves()]
+
+    if t1.GetEntries() != t2.GetEntries():
+        print_diff(t1.GetName(), 'Entries: %i' % t1.GetEntries(), 'Entries: %i' % t2.GetEntries())
+
+    for var1 in branches1:
+
+        name1 = '%s//%s' % (t1.GetName(), var1)
+
+        if not var1 in branches2:
+            print_only_1(name1)
+
+
+    for var2 in branches2:
+
+        name2 = '%s//%s' % (t2.GetName(), var2)
+
+        if not var2 in branches1:
+            print_only_2(name2)
+
+
+    # project to histogram and compare entries/mean/RMS. TODO: Maybe use some better test
+    for var1 in branches1:
+        if not var1 in branches2:
+            continue
+
+        name1 = '%s//%s' % (t1.GetName(), var1)
+
+        hname_1 = '%s_1' % var1
+        exp1 = '%s>>%s' % (var1, hname_1)
+
+        hname_2 = '%s_2' % var1
+        exp2 = '%s>>%s' % (var1, hname_2)
+
+        t1.Draw(exp1, '', 'goff')
+        h1 = ROOT.gDirectory.Get(hname_1)
+
+        t2.Draw(exp2, '', 'goff')
+        h2 = ROOT.gDirectory.Get(hname_2)
+
+        cmp_hists(h1, h2)
+
+
+
+
+def cmp_dirs(d1, d2):
+
+    # compare content
+    keys1 = [ key for key in d1.GetListOfKeys() ]
+    keys2 = [ key for key in d2.GetListOfKeys() ]
+
+    names1 = [ key.GetName() for key in keys1 ]
+    names2 = [ key.GetName() for key in keys2 ]
+
+    classes1 = [ key.GetClassName() for key in keys1 ]
+    classes2 = [ key.GetClassName() for key in keys2 ]
+
+    if names1 != names2:
+
+        # Check keys in file1 and not in file2
+        for name1 in names1:
+            if name1 not in names2:
+                print_only_1(name1)
+
+        # Check keys in file2 and not in file1
+        for name2 in names2:
+            if name2 not in names1:
+                print_only_2(name2)
+
+
+    # compare trees/directories
+    for i1, name1 in enumerate(names1):
+        for i2, name2 in enumerate(names2):
+
+            if name1 != name2:
+                continue
+
+            class1 = classes1[i1]
+            class2 = classes2[i2]
+
+            if class1.startswith('TH') and class2.startswith('TH'):
+
+                hist1 = d1.Get(name1)
+                hist2 = d2.Get(name2)
+
+                cmp_hists(hist1, hist2)
+
+
+            elif class1 == 'TTree' and class2 == 'TTree':
+
+                tree1 = d1.Get(name1)
+                tree2 = d2.Get(name2)
+
+                cmp_trees(tree1, tree2)
+
+
+            elif (class1 == 'TDirectory' and class2 == 'TDirectory') or (class1 == 'TDirectoryFile' and class2 == 'TDirectoryFile'):
+
+                dir1 = d1.Get(name1)
+                dir2 = d2.Get(name2)
+
+                cmp_dirs(dir1, dir2)
+
+
+
+
+
 def main():
 
     parser = argparse.ArgumentParser(description='')
@@ -19,8 +173,6 @@ def main():
     ## paths
     parser.add_argument('filepath1', nargs='?')
     parser.add_argument('filepath2', nargs='?')
-
-    parser.add_argument('-t', '--tree', help='Compare trees with this name')
 
     args = parser.parse_args()
 
@@ -36,11 +188,11 @@ def main():
         return 1
 
     try:
-        fin1 = ROOT.TFile.Open(file_path_1)
+        file1 = ROOT.TFile.Open(file_path_1)
 
-        if fin1.IsZombie():
+        if file1.IsZombie():
             print('Error opening rootfile')
-            fin1.Close()
+            file1.Close()
             return 1
     except ReferenceError:
         return 1
@@ -51,81 +203,29 @@ def main():
         return 1
 
     try:
-        fin2 = ROOT.TFile.Open(file_path_2)
+        file2 = ROOT.TFile.Open(file_path_2)
 
-        if fin2.IsZombie():
+        if file2.IsZombie():
             print('Error opening rootfile')
-            fin2.Close()
+            file2.Close()
             return 1
     except ReferenceError:
         return 1
 
 
-    # compare content
-    keys1 = [ key for key in fin1.GetListOfKeys() ]
-    keys2 = [ key for key in fin2.GetListOfKeys() ]
+    print_diff('Path', file_path_1, file_path_2)
 
-    names1 = [ key.GetName() for key in keys1 ]
-    names2 = [ key.GetName() for key in keys2 ]
+    date1 = time.ctime(os.stat(file_path_1).st_mtime)
+    date2 = time.ctime(os.stat(file_path_2).st_mtime)
 
-    if names1 != names2:
-        print('Different key content!')
+    if date1 != date2:
+        print_diff('Date', date1, date2)
 
 
-    if args.tree is None:
-        return
-
-    if not (args.tree in names1 and args.tree in names2):
-        print('Tree %s not available in on of the input files' % args.tree)
-        return
-
-    tree1 = fin1.Get(args.tree)
-    tree2 = fin2.Get(args.tree)
-
-    branches1 = [ branch.GetName() for branch in tree1.GetListOfLeaves() ]
-    branches2 = [ branch.GetName() for branch in tree2.GetListOfLeaves() ]
-
-    if tree1.GetEntries() != tree2.GetEntries():
-        print('Different number of entries in mini ntuples')
-
-    for var in branches1:
-
-        if not var in branches2:
-            print('Variable ' + var + ' not in file2')
-            continue
-
-        hname_1 = '%s_1' % var
-        exp1 = '%s>>%s' % (var, hname_1)
-
-        hname_2 = '%s_2' % var
-        exp2 = '%s>>%s' % (var, hname_2)
-
-        tree1.Draw(exp1, '', 'goff')
-        h1 = ROOT.gDirectory.Get(hname_1)
-
-        tree2.Draw(exp2, '', 'goff')
-        h2 = ROOT.gDirectory.Get(hname_2)
-
-        # compare histograms
-        entries_1 = h1.GetEntries()
-        entries_2 = h2.GetEntries()
-
-        mean_1 = h1.GetMean()
-        mean_2 = h2.GetMean()
-
-        rms_1 = h1.GetRMS()
-        rms_2 = h2.GetRMS()
-
-        if (entries_1 != entries_2) or (mean_1 != mean_2) or (rms_1 != rms_2):
-            print('Difference in %s (Entries, Mean, RMS): (%i, %.2f, %.2f) != (%i, %.2f, %.2f)' % (var, entries_1, mean_1, rms_1, entries_2, mean_2, rms_2))
+    cmp_dirs(file1, file2)
 
 
-    for var in branches2:
 
-        if not var in branches1:
-            print('Variable ' + var + ' not in file1')
-        else:
-            continue
 
 if __name__ == '__main__':
     main()
