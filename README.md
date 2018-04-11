@@ -11,8 +11,10 @@ or
 
     python setup.py install --user
 
-## Usage
+## rootls
 
     rootls file.root [obj]
 
-    
+## rootdiff
+
+    rootdiff file1.root file2.root
