@@ -5,7 +5,6 @@ from __future__ import print_function
 import os
 import sys
 import argparse
-from rootutils.prettytable import PrettyTable
 
 import signal
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
@@ -21,11 +20,35 @@ ROOT.gROOT.SetBatch(True)
 
 
 def str_to_num(s):
+    # it may be already int or float
+    if isinstance(s, (int, float)):
+        return s
+    # all int like strings can be converted to float so int tries first
     try:
         return int(s)
-    except ValueError:
+    except (TypeError, ValueError):
+        pass
+    try:
         return float(s)
+    except (TypeError, ValueError):
+        return s
 
+def split_cmd(cmd):
+
+    if '(' in cmd and ')' in cmd:
+        i1 = cmd.index('(')
+        i2 = cmd.index(')')
+        cmd, cmd_arg = cmd[:i1], cmd[i1+1:i2]
+
+        if ',' in cmd_arg:
+            cmd_arg = [ str_to_num(a) for a in cmd_arg.split(',') ]
+        else:
+            cmd_arg = str_to_num(cmd_arg)
+
+    else:
+        cmd, cmd_arg = cmd, ''
+
+    return cmd, cmd_arg
 
 #------------
 # Histograms
@@ -89,17 +112,13 @@ def print_hist(hist, args):
 
     # FIX: update for TH2 support
 
-    if args.getbincontent is not None:
+    # Checked cmds: GetBinContent, GetBinError
+    if args.cmd is not None:
 
-        if args.getbincontent == 'last':
-            bin_ = hist.GetNbinsX()
-        else:
-            bin_ = int(args.getbincontent)
+        cmd, cmd_arg = split_cmd(args.cmd)
 
-        if bin_ <= hist.GetNbinsX() and bin_ > 0:
-            print(hist.GetBinContent(bin_))
-        else:
-            print('bin %i does not exist.' % bin_)
+        print(getattr(hist, cmd)(cmd_arg))
+
 
     else:
         print_hist_all(hist)
@@ -123,28 +142,28 @@ def scan_tree(tree, fields, selection, sort=None, format_=False):
 
 
     # build table
-    table = PrettyTable(fields)
+    # table = PrettyTable(fields)
     for row in rows:
         if format_:
-            table.add_row([ format_ % f for f in row])
+            print([ format_ % f for f in row])
         else:
-            table.add_row(row)
+            print(row)
 
-    table.sortby = sort
-    table.align = 'r'
+    # table.sortby = sort
+    # table.align = 'r'
 
     print(table)
 
 
 def print_tree(tree, args):
 
-    if args.getentries:
-        print(tree.GetEntries())
+    if args.cmd is not None:
+        print(getattr(tree, cmd))
 
     elif args.count:
 
-        hist = ROOT.TH1F('count', 'count', 1, 0.5, 1.5)
-        tree.Project('count', '1', args.selection)
+        hist = ROOT.TH1F('tmp', 'tmp', 1, 0.5, 1.5)
+        tree.Project('tmp', '1', args.selection)
 
         error = ROOT.Double(0.0)
         integral = hist.IntegralAndError(1, hist.GetNbinsX(), error)
@@ -172,33 +191,28 @@ def main():
 
     ## general options
     parser.add_argument('-t', '--type', action='store_true', help='Show object type')
+    parser.add_argument('--format', help='')
+
+    parser.add_argument('--cmd', help='Object method. For example GetEntries or GetBinContent(1)')
 
     ## tree options
     parser.add_argument('-s', '--selection', default='', help='Apply selection to tree')
 
     parser.add_argument('--scan', help='Scan tree. Similar to TTree::Scan')
-    parser.add_argument('--sort', help='Sort scan output by this column')
+    #parser.add_argument('--sort', help='Sort scan output by this column')
+    parser.add_argument('-c', '--count', action='store_true')
 
-    parser.add_argument('-ge', '--getentries', action='store_true', help='Print tree entries')
-    parser.add_argument('-ce', '--count', action='store_true')
-
-    ## histogram options
-    parser.add_argument('-gbc', '--getbincontent', help='Show bin content for this bin')
-
-    parser.add_argument('--format', help='')
 
     ## edit options (onyl available if --edit)
     parser.add_argument('--edit', action='store_true', help='Caution! you are modifying the file')
     parser.add_argument('--delete', action='store_true', help='Caution! Delete all objects with this name. ')
-    parser.add_argument('--setbincontent', help='SetBinContent. Expect argument as "bin,content"')
-
-
 
     if len(sys.argv) < 2:
         parser.print_usage()
         return
 
     args = parser.parse_args()
+
 
     file_path, root_path = args.filepath, args.rootpath
 
@@ -257,7 +271,8 @@ def main():
 
         return
 
-    # root file
+
+    # One root file
     if not os.path.isfile(file_path):
         print('%s is not a file' % file_path)
         return 1
@@ -274,7 +289,6 @@ def main():
 
 
     keys = fin.GetListOfKeys()
-
 
     # Show file content
     if root_path is None:
@@ -294,6 +308,9 @@ def main():
                 fin.cd(spath[0])
                 root_path = spath[1]
 
+                # recompute keys
+                keys = ROOT.gDirectory.GetListOfKeys()
+
 
         if args.edit:
             fin.ReOpen('update')
@@ -301,25 +318,23 @@ def main():
             if args.delete:
                 fin.Delete(root_path+';*')
 
-            elif args.setbincontent is not None:
+            elif args.cmd is not None:
 
-                obj = fin.Get(root_path)
+                obj = ROOT.gDirectory.Get(root_path)
 
                 if not obj.InheritsFrom('TH1'):
                     fin.Close()
                     return 1
 
-                b, c = args.setbincontent.split(',')
+                cmd, cmd_arg = split_cmd(args.cmd)
 
-                bin_ = int(b)
-                content_ = float(c)
+                getattr(obj, cmd)(*cmd_arg)
 
-                obj.SetBinContent(bin_, content_)
                 obj.Write()
 
         elif root_path in [ key.GetName() for key in keys ]:
 
-            obj = fin.Get(root_path)
+            obj = ROOT.gDirectory.Get(root_path)
 
             # dir
             if obj.InheritsFrom('TDirectory'):
@@ -334,6 +349,7 @@ def main():
             elif obj.InheritsFrom('TTree'):
                 print_tree(obj, args)
 
+            # others
             else:
                 obj.Print()
 

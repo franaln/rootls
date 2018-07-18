@@ -886,25 +886,24 @@ def make_poisson_cl_errors(hist):
 
     x_val  = array('f')
     y_val  = array('f')
-    x_errU = array('f')
-    x_errL = array('f')
-    y_errU = array('f')
-    y_errL = array('f')
+    x_err_up = array('f')
+    x_err_dn = array('f')
+    y_err_up = array('f')
+    y_err_dn = array('f')
 
     for b in range(1, hist.GetNbinsX()+1):
         bin_content = hist.GetBinContent(b)
-        if bin_content > 0.:
-            bin_err_up  = calc_poisson_cl_upper(0.68, bin_content) - bin_content
-            bin_err_dn  = bin_content - calc_poisson_cl_lower(0.68, bin_content)
-            x_val.append(hist.GetXaxis().GetBinCenter(b))
-            y_val.append(bin_content)
-            y_errU.append(bin_err_up)
-            y_errL.append(bin_err_dn)
-            x_errU.append(hist.GetXaxis().GetBinWidth(b)/2.)
-            x_errL.append(hist.GetXaxis().GetBinWidth(b)/2.)
+        bin_err_up  = calc_poisson_cl_upper(0.68, bin_content) - bin_content
+        bin_err_dn  = bin_content - calc_poisson_cl_lower(0.68, bin_content)
+        x_val.append(hist.GetXaxis().GetBinCenter(b))
+        y_val.append(bin_content)
+        y_err_up.append(bin_err_up)
+        y_err_dn.append(bin_err_dn)
+        x_err_up.append(hist.GetXaxis().GetBinWidth(b)/2.)
+        x_err_dn.append(hist.GetXaxis().GetBinWidth(b)/2.)
 
     if len(x_val) > 0:
-        data_graph = ROOT.TGraphAsymmErrors(len(x_val), x_val, y_val, x_errL, x_errU, y_errL, y_errU)
+        data_graph = ROOT.TGraphAsymmErrors(len(x_val), x_val, y_val, x_err_dn, x_err_up, y_err_dn, y_err_up)
         return data_graph
     else:
         return ROOT.TGraph()
@@ -970,7 +969,6 @@ void MultiDraw(TTree *tree, TObjArray *formulae, TObjArray *weights, TObjArray *
   }
 }
 """
-
 
 def MakeTObjArray(the_list):
     """
@@ -1041,7 +1039,6 @@ def MultiDraw(self, *draw_list):
             selections.append(ROOT.TObject())
 
         last_variable, last_selection = variable, selection
-
 
     # Only compile MultiDraw once
     try:
