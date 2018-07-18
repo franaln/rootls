@@ -78,8 +78,11 @@ def main():
     branches1 = [branch.GetName() for branch in tree1.GetListOfLeaves()]
     branches2 = [branch.GetName() for branch in tree2.GetListOfLeaves()]
 
-    if tree1.GetEntries() != tree2.GetEntries():
-        print('** Different number of entries in mini ntuples')
+    entries1 = tree1.GetEntries()
+    entries2 = tree2.GetEntries()
+
+    if entries1 != entries2:
+        print('** Different number of entries in mini ntuples. Entries (file1) = %i, Entries(file2) = %i' % (entries1, entries2))
 
     for var in branches1:
 
