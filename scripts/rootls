@@ -117,7 +117,10 @@ def print_hist(hist, args):
 
         cmd, cmd_arg = split_cmd(args.cmd)
 
-        print(getattr(hist, cmd)(cmd_arg))
+        if isinstance(cmd_arg, list):
+            print(getattr(hist, cmd)(*cmd_arg))
+        else:
+            print(getattr(hist, cmd)(cmd_arg))
 
 
     else:
