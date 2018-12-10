@@ -103,6 +103,7 @@ class Value(object):
 
         return Value(mean, error)
 
+
 #-----------
 # Root file (remove?)
 #-----------
@@ -173,37 +174,8 @@ class RootFile(ROOT.TFile):
 
 
 #-----------
-# Histograms (CLEAN)
+# Histograms
 #-----------
-def histogram(name, nx=None, xmin=None, xmax=None, xbins=None):
-
-    if xbins:
-        hist = ROOT.TH1F(name, name, len(xbins)-1, array('d', xbins))
-    elif nx is not None and xmin is not None and xmax is not None:
-        hist = ROOT.TH1F(name, name, nx, xmin, xmax)
-
-    # To not be owned by the current directory
-    hist.SetDirectory(0)
-    ROOT.SetOwnership(hist, False)
-
-    # Default configuration
-    hist.Sumw2()
-    hist.SetStats(0)
-    hist.SetTitle('')
-
-    return hist
-
-def histogram2d(name, nx=None, xmin=None, xmax=None, ny=None, ymin=None, ymax=None, xbins=None, ybins=None):
-
-    if xbins is not None and ybins is not None:
-        hist = ROOT.TH2F(name, name, len(xbins)-1, array('d', xbins), len(ybins)-1, array('d', ybins))
-    elif nx is not None and ny is not None:
-        hist = ROOT.TH2F(name, name, nx, xmin, xmax, ny, ymin, ymax)
-
-    hist.SetDirectory(0)
-
-    return hist
-
 def histogram_equal_to(hist, name=None):
     if name is None:
         name = hist.GetName()
@@ -288,8 +260,6 @@ def histogram_add_overflow_bin(hist):
         hist.SetBinError(over_bin_x, last_bin_y, 0.)
         hist.SetBinError(over_bin_x, over_bin_y, 0.)
 
-
-
     # 1D histogram
     else:
         last_bin = hist.GetNbinsX()
@@ -306,9 +276,6 @@ def histogram_add_overflow_bin(hist):
         new_err = math.sqrt(e1*e1 + e2*e2)
         hist.SetBinError(last_bin, new_err)
         hist.SetBinError(over_bin, 0.0)
-
-
-ROOT.TH1.AddOverflowBin = histogram_add_overflow_bin
 
 def histogram_scale(hist, c, e_c=None):
     """ Scale histogram by a factor with error (c +- e_c)
@@ -370,6 +337,7 @@ def merge_histograms(merge_name, merge_list):
 
     return new_hist
 
+
 # Histogram Manager
 class HistManager:
 
@@ -412,7 +380,6 @@ class HistManager:
             self.data[name].Fill(value_x, value_y, weight)
         else:
             self.data[name].Fill(value_x, value_y, self.weight)
-
 
     def save(self, path):
         f = ROOT.TFile(path, 'recreate')
@@ -505,14 +472,6 @@ def get_color(c):
                 colour = getattr(ROOT, c)
 
     return colour
-
-# def set_palette():
-#     s = array('d', [0.00, 0.34, 0.61, 0.84, 1.00])
-#     r = array('d', [0.00, 0.00, 0.87, 1.00, 0.51])
-#     g = array('d', [0.00, 0.81, 1.00, 0.20, 0.00])
-#     b = array('d', [0.51, 1.00, 0.12, 0.00, 0.00])
-#     ROOT.TColor.CreateGradientColorTable(len(s), s, r, g, b, 999)
-#     ROOT.gStyle.SetNumberContours(999)
 
 def set_default_style():
 
@@ -661,42 +620,42 @@ def set_style(obj, **kwargs):
         obj.GetYaxis().SetRangeUser(ymin, ymax)
 
 
-def canvas(name='', title='', xsize=600, ysize=600):
-    if not title:
-        title = name
-    c = ROOT.TCanvas(name, title, xsize, ysize)
-    ROOT.SetOwnership(c, False)
-    return c
+# def canvas(name='', title='', xsize=600, ysize=600):
+#     if not title:
+#         title = name
+#     c = ROOT.TCanvas(name, title, xsize, ysize)
+#     ROOT.SetOwnership(c, False)
+#     return c
 
-def canvas_ratio(name='', title='', xsize=600, ysize=600):
+# def canvas_ratio(name='', title='', xsize=600, ysize=600):
 
-    c = ROOT.TCanvas()
+#     c = ROOT.TCanvas()
 
-    cup   = ROOT.TPad("u", "u", 0., 0.305, 0.99, 1)
-    cdown = ROOT.TPad("d", "d", 0., 0.01, 0.99, 0.295)
-    cup.SetRightMargin(0.05)
-    cup.SetBottomMargin(0.005)
+#     cup   = ROOT.TPad("u", "u", 0., 0.305, 0.99, 1)
+#     cdown = ROOT.TPad("d", "d", 0., 0.01, 0.99, 0.295)
+#     cup.SetRightMargin(0.05)
+#     cup.SetBottomMargin(0.005)
 
-    cup.SetTickx()
-    cup.SetTicky()
-    cdown.SetTickx()
-    cdown.SetTicky()
-    cdown.SetRightMargin(0.05)
-    cdown.SetBottomMargin(0.3)
-    cdown.SetTopMargin(0.0054)
-    cdown.SetFillColor(ROOT.kWhite)
-    cup.Draw()
-    cdown.Draw()
+#     cup.SetTickx()
+#     cup.SetTicky()
+#     cdown.SetTickx()
+#     cdown.SetTicky()
+#     cdown.SetRightMargin(0.05)
+#     cdown.SetBottomMargin(0.3)
+#     cdown.SetTopMargin(0.0054)
+#     cdown.SetFillColor(ROOT.kWhite)
+#     cup.Draw()
+#     cdown.Draw()
 
-    return cup, cdown
+#     return cup, cdown
 
-def legend(xmin, ymin, xmax, ymax, columns=1):
-    leg = ROOT.TLegend(xmin, ymin, xmax, ymax)
-    leg.SetFillColor(0)
-    leg.SetBorderSize(0)
-    if columns > 1:
-        leg.SetNColumns(columns)
-    return leg
+# def legend(xmin, ymin, xmax, ymax, columns=1):
+#     leg = ROOT.TLegend(xmin, ymin, xmax, ymax)
+#     leg.SetFillColor(0)
+#     leg.SetBorderSize(0)
+#     if columns > 1:
+#         leg.SetNColumns(columns)
+#     return leg
 
 def draw_latex(x, y, text, size=None, ndc=False):
     l = ROOT.TLatex(x, y, text)
@@ -758,311 +717,152 @@ def get_histogram(filename, treename, variable, selection='', xmin=None, xmax=No
     return hist.Clone()
 
 
-#-----------------------
-# Statistical functions
-#-----------------------
+# #-----------------------
+# # Statistical functions
+# #-----------------------
 
-def get_significance(s, b, sb, minb=None, mins=None):
+# def get_significance(s, b, sb, minb=None, mins=None):
 
-    z = ROOT.RooStats.NumberCountingUtils.BinomialExpZ(s, b, sb)
+#     z = ROOT.RooStats.NumberCountingUtils.BinomialExpZ(s, b, sb)
 
-    if minb is not None and b < minb:
-        z = 0.
-    if mins is not None and s < mins:
-        z = 0.
-    if z < 0.:
-        z = 0.
+#     if minb is not None and b < minb:
+#         z = 0.
+#     if mins is not None and s < mins:
+#         z = 0.
+#     if z < 0.:
+#         z = 0.
 
-    if z == float('Inf'):
-        z = 0.
+#     if z == float('Inf'):
+#         z = 0.
 
-    return z
+#     return z
 
-def get_significance_unc(s, b, sb=0.5, minb=None, mins=None):
+# def get_significance_unc(s, b, sb=0.5, minb=None, mins=None):
 
-    """
-    *** OLD -> use RooStats ***
-    Get significance taking into account
-    the background systematic uncertainty
-    (from Cowan formula) """
+#     """
+#     *** OLD -> use RooStats ***
+#     Get significance taking into account
+#     the background systematic uncertainty
+#     (from Cowan formula) """
 
-    try:
-        s = s.mean
-        b = b.mean
-    except:
-        pass
+#     try:
+#         s = s.mean
+#         b = b.mean
+#     except:
+#         pass
 
-    s, b = float(s), float(b)
+#     s, b = float(s), float(b)
 
-    if s < 0.00001 or b < 0.00001:
-        return 0.00
+#     if s < 0.00001 or b < 0.00001:
+#         return 0.00
 
-    if mins is not None and s < mins:
-        return 0.00
-    if minb is not None and b < minb:
-        return 0.00
+#     if mins is not None and s < mins:
+#         return 0.00
+#     if minb is not None and b < minb:
+#         return 0.00
 
-    sb = sb * b # as default we use 50% of uncertainty for the background
+#     sb = sb * b # as default we use 50% of uncertainty for the background
 
-    za2_p = (s + b) * ROOT.TMath.Log( ((s + b) * (b + sb**2)) / (b**2 + (s + b) * sb**2) )
-    za2_m = (b**2/sb**2) * ROOT.TMath.Log( 1 + (s * sb**2)/(b * (b + sb**2)) )
+#     za2_p = (s + b) * ROOT.TMath.Log( ((s + b) * (b + sb**2)) / (b**2 + (s + b) * sb**2) )
+#     za2_m = (b**2/sb**2) * ROOT.TMath.Log( 1 + (s * sb**2)/(b * (b + sb**2)) )
 
-    za2 = 2 * (za2_p - za2_m)
+#     za2 = 2 * (za2_p - za2_m)
 
-    if za2 <= 0.:
-        return 0
+#     if za2 <= 0.:
+#         return 0
 
-    za = ROOT.TMath.Sqrt(za2)
+#     za = ROOT.TMath.Sqrt(za2)
 
-    if za > 0.0:
-        za = round(za, 2)
-    else:
-        za = 0.00
+#     if za > 0.0:
+#         za = round(za, 2)
+#     else:
+#         za = 0.00
 
-    return za
+#     return za
 
 
-def get_sb(s, b):
-    if b > 0:
-        return s/ROOT.TMath.Sqrt(b)
-    else:
-        return 0
+# def get_sb(s, b):
+#     if b > 0:
+#         return s/ROOT.TMath.Sqrt(b)
+#     else:
+#         return 0
 
 
-def pvalue(obs, exp):
-    if obs > exp:
-        return 1 - ROOT.Math.inc_gamma_c(obs, exp)
-    else:
-        return ROOT.Math.inc_gamma_c(obs+1, exp)
+# def pvalue(obs, exp):
+#     if obs > exp:
+#         return 1 - ROOT.Math.inc_gamma_c(obs, exp)
+#     else:
+#         return ROOT.Math.inc_gamma_c(obs+1, exp)
 
 
-def zvalue(pvalue):
-    return ROOT.TMath.Sqrt(2) * ROOT.TMath.ErfInverse(1. - 0.2*pvalue)
+# def zvalue(pvalue):
+#     return ROOT.TMath.Sqrt(2) * ROOT.TMath.ErfInverse(1. - 0.2*pvalue)
 
 
-def poisson_significance(obs, exp):
+# def poisson_significance(obs, exp):
 
-    p = pvalue(obs, exp)
+#     p = pvalue(obs, exp)
 
-    if p < 0.5:
-        if obs > exp:
-            return zvalue(p)
-        else:
-            return -zvalue(p)
+#     if p < 0.5:
+#         if obs > exp:
+#             return zvalue(p)
+#         else:
+#             return -zvalue(p)
 
-    return 0.0
+#     return 0.0
 
 
-def calc_poisson_cl_lower(q, n_obs):
-    """
-    Calculate lower confidence limit
-    e.g. to calculate the 68% lower limit for 2 observed events:
-    calc_poisson_cl_lower(0.68, 2.)
-    """
-    ll = 0.
-    if n_obs >= 0.:
-        a = (1. - q) / 2. # = 0.025 for 95% confidence interval
-        ll = ROOT.TMath.ChisquareQuantile(a, 2.* n_obs) / 2.
-
-    return ll
-
-def calc_poisson_cl_upper(q, n_obs):
-    """
-    Calculate upper confidence limit
-    e.g. to calculate the 68% upper limit for 2 observed events:
-    calc_poisson_cl_upper(0.68, 2.)
-    """
-    ul = 0.
-    if n_obs >= 0. :
-        a = 1. - (1. - q) / 2. # = 0.025 for 95% confidence interval
-        ul = ROOT.TMath.ChisquareQuantile(a, 2.* (n_obs + 1.)) / 2.
-
-    return ul
-
-def make_poisson_cl_errors(hist):
-    """
-    Make a TGraph from a TH1 with the poisson errors
-    """
-
-    x_val  = array('f')
-    y_val  = array('f')
-    x_err_up = array('f')
-    x_err_dn = array('f')
-    y_err_up = array('f')
-    y_err_dn = array('f')
-
-    for b in range(1, hist.GetNbinsX()+1):
-        bin_content = hist.GetBinContent(b)
-        bin_err_up  = calc_poisson_cl_upper(0.68, bin_content) - bin_content
-        bin_err_dn  = bin_content - calc_poisson_cl_lower(0.68, bin_content)
-        x_val.append(hist.GetXaxis().GetBinCenter(b))
-        y_val.append(bin_content)
-        y_err_up.append(bin_err_up)
-        y_err_dn.append(bin_err_dn)
-        x_err_up.append(hist.GetXaxis().GetBinWidth(b)/2.)
-        x_err_dn.append(hist.GetXaxis().GetBinWidth(b)/2.)
-
-    if len(x_val) > 0:
-        data_graph = ROOT.TGraphAsymmErrors(len(x_val), x_val, y_val, x_err_dn, x_err_up, y_err_dn, y_err_up)
-        return data_graph
-    else:
-        return ROOT.TGraph()
-
-
-
-
-#-------
-# Trees
-#-------
-
-multidraw_cxx = """
-
-// MultiDraw.cxx (code from pwaller)
-// Draws many histograms in one loop over a tree.
-// A little bit like a TTree::Draw which can make many histograms
-
-#include <TTree.h>
-#include <TH1D.h>
-#include <TTreeFormula.h>
-#include <TStopwatch.h>
-
-#include <iostream>
-
-// Get an Element from an array
-#define EL( type, array, index ) dynamic_cast<type *>( array->At( index ) )
-
-void MultiDraw(TTree *tree, TObjArray *formulae, TObjArray *weights, TObjArray *hists, UInt_t list_len)
-{
-  Long64_t i = 0;
-  Long64_t num_events = tree->GetEntries();
-
-  Double_t value = 0, weight = 0, common_weight = 0;
-  Int_t tree_number = -1;
-
-  for (i = 0; i<num_events; i++) {
-
-    // Display progress every 10000 events
-    if (i % 100000 == 0) {
-      std::cout.precision(2);
-      std::cout << "Done " << (double(i) / ( double(num_events)) * 100.0f) << "%   \r";
-      std::cout.flush();
-    }
-
-    if (tree_number != tree->GetTreeNumber()) {
-      tree_number = tree->GetTreeNumber();
-    }
-
-    tree->LoadTree(tree->GetEntryNumber(i));
-
-    for (UInt_t j=0; j<list_len; j++) {
-      // If the Value or the Weight is the same as the previous, then it can be re-used.
-      // In which case, this element fails to dynamic_cast to a formula, and evaluates to NULL
-      if ( EL(TTreeFormula, formulae, j) )
-        value = EL(TTreeFormula, formulae, j)->EvalInstance();
-
-      if ( EL(TTreeFormula, weights, j) )
-        weight = EL(TTreeFormula, weights, j)->EvalInstance();
-
-      if (weight)
-        EL(TH1D, hists, j)->Fill(value, weight);
-    }
-  }
-}
-"""
-
-def MakeTObjArray(the_list):
-    """
-    Turn a python iterable into a ROOT TObjArray
-    """
-
-    result = ROOT.TObjArray()
-    result.SetOwner()
-
-    # Make PyROOT give up ownership of the things that are being placed in the
-    # TObjArary. They get deleted because of result.SetOwner()
-    for item in the_list:
-        ROOT.SetOwnership(item, False)
-        result.Add(item)
-
-    return result
-
-
-def MultiDraw(self, *draw_list):
-    """
-    Draws (projects) many histograms in one loop over a tree.
-
-        Instead of:
-        tree.Project("hname1", "ph_pt",  "weightA")
-        tree.Project("hname2", "met_et", "weightB")
-
-        Do:
-        tree.MultiDraw( ("hname1", "ph_pt",  "weightA" ),
-                        ("hname2", "met_et", "weightB" ) )
-    """
-
-    hnames, variables, selections = [], [], []
-
-    last_variable, last_selection = None, None
-
-    histograms = []
-    for i, drawexp in enumerate(draw_list):
-
-        # Expand out origFormula and weight, otherwise just use weight of 1.
-        hname, variable, selection = drawexp
-
-        hist = ROOT.gDirectory.Get(hname)
-        if not hist:
-            raise RuntimeError("MultiDraw: Couldn't find histogram to fill '%s' in current directory." % name)
-
-        histograms.append(hist)
-
-        # The following two 'if' clauses check that the next formula is different
-        # to the previous one. If it is not, we add an ordinary TObject.
-        # Then, the dynamic cast in MultiDraw.cxx fails, giving 'NULL', and
-        # The previous value is used. This saves the recomputing of identical values
-        if variable != last_variable:
-            f = ROOT.TTreeFormula("variable%i" % i, variable, self)
-            if not f.GetTree():
-                raise RuntimeError("TTreeFormula didn't compile: %s" % variable)
-            f.SetQuickLoad(True)
-            variables.append(f)
-        else:
-            variables.append(ROOT.TObject())
-
-        if selection != last_selection:
-            f = ROOT.TTreeFormula("selection%i" % i, selection, self)
-            if not f.GetTree():
-                raise RuntimeError("TTreeFormula didn't compile: %s" % selection)
-            f.SetQuickLoad(True)
-            selections.append(f)
-        else:
-            selections.append(ROOT.TObject())
-
-        last_variable, last_selection = variable, selection
-
-    # Only compile MultiDraw once
-    try:
-        from ROOT import MultiDraw as _MultiDraw
-    except ImportError:
-        ROOT.gInterpreter.Declare(multidraw_cxx)
-        from ROOT import MultiDraw as _MultiDraw
-
-    # Ensure that formulae are told when tree changes
-    fManager = ROOT.TTreeFormulaManager()
-    for variable in variables + selections:
-        if type(variable) == ROOT.TTreeFormula:
-            fManager.Add(variable)
-
-    fManager.Sync()
-    self.SetNotify(fManager)
-
-    # Draw everything!
-    _MultiDraw(self,
-               MakeTObjArray(variables),
-               MakeTObjArray(selections),
-               MakeTObjArray(histograms),
-               len(variables))
-
-    return
-
-ROOT.TTree.MultiDraw = MultiDraw
+# def calc_poisson_cl_lower(q, n_obs):
+#     """
+#     Calculate lower confidence limit
+#     e.g. to calculate the 68% lower limit for 2 observed events:
+#     calc_poisson_cl_lower(0.68, 2.)
+#     """
+#     ll = 0.
+#     if n_obs >= 0.:
+#         a = (1. - q) / 2. # = 0.025 for 95% confidence interval
+#         ll = ROOT.TMath.ChisquareQuantile(a, 2.* n_obs) / 2.
+
+#     return ll
+
+# def calc_poisson_cl_upper(q, n_obs):
+#     """
+#     Calculate upper confidence limit
+#     e.g. to calculate the 68% upper limit for 2 observed events:
+#     calc_poisson_cl_upper(0.68, 2.)
+#     """
+#     ul = 0.
+#     if n_obs >= 0. :
+#         a = 1. - (1. - q) / 2. # = 0.025 for 95% confidence interval
+#         ul = ROOT.TMath.ChisquareQuantile(a, 2.* (n_obs + 1.)) / 2.
+
+#     return ul
+
+# def make_poisson_cl_errors(hist):
+#     """
+#     Make a TGraph from a TH1 with the poisson errors
+#     """
+
+#     x_val  = array('f')
+#     y_val  = array('f')
+#     x_err_up = array('f')
+#     x_err_dn = array('f')
+#     y_err_up = array('f')
+#     y_err_dn = array('f')
+
+#     for b in range(1, hist.GetNbinsX()+1):
+#         bin_content = hist.GetBinContent(b)
+#         bin_err_up  = calc_poisson_cl_upper(0.68, bin_content) - bin_content
+#         bin_err_dn  = bin_content - calc_poisson_cl_lower(0.68, bin_content)
+#         x_val.append(hist.GetXaxis().GetBinCenter(b))
+#         y_val.append(bin_content)
+#         y_err_up.append(bin_err_up)
+#         y_err_dn.append(bin_err_dn)
+#         x_err_up.append(hist.GetXaxis().GetBinWidth(b)/2.)
+#         x_err_dn.append(hist.GetXaxis().GetBinWidth(b)/2.)
+
+#     if len(x_val) > 0:
+#         data_graph = ROOT.TGraphAsymmErrors(len(x_val), x_val, y_val, x_err_dn, x_err_up, y_err_dn, y_err_up)
+#         return data_graph
+#     else:
+#         return ROOT.TGraph()
